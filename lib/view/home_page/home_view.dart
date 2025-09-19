@@ -1,5 +1,7 @@
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
+import 'package:al_sharq_conference/view/home_page/forum_chat/forum_chat.dart';
 import 'package:al_sharq_conference/view/home_page/my_agenda_view/my_agenda_view.dart';
+import 'package:al_sharq_conference/view/home_page/seesion_details_view/session_detail_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 
@@ -136,18 +138,23 @@ class HomeView extends StatelessWidget {
                     // Today's Schedule Section
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        AppText(
+                      children: [
+                        const AppText(
                           text: "Today's Schedule",
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
-                        AppText(
-                          text: 'View All',
-                          fontSize: 14,
-                          color: AppColors.blackColor,
-                          fontWeight: FontWeight.w600,
+                        InkWell(
+                          onTap: (){
+                            Navigator.push(context,  MaterialPageRoute(builder: (context)=>SessionDetailsScreen()));
+                          },
+                          child: const AppText(
+                            text: 'View All',
+                            fontSize: 14,
+                            color: AppColors.blackColor,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -269,11 +276,16 @@ class HomeView extends StatelessWidget {
                           subtitle: 'Connect & chat',
                           color: Colors.purple.shade100,
                         ),
-                        _buildQuickAccessItem(
-                          imagePath: Images.forums,
-                          title: 'Forums',
-                          subtitle: 'Discussions',
-                          color: Colors.teal.shade100,
+                        InkWell(
+                          onTap: (){
+                            Navigator.push(context, MaterialPageRoute(builder: (context)=>ForumChatScreen()));
+                          },
+                          child: _buildQuickAccessItem(
+                            imagePath: Images.forums,
+                            title: 'Forums',
+                            subtitle: 'Discussions',
+                            color: Colors.teal.shade100,
+                          ),
                         ),
                       ],
                     ),

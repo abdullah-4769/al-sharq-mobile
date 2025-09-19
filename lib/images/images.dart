@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class Images {
   static const String splashLogo = 'assets/al_sharq_logo.png';
   static const String splashBackground = 'assets/splash_logo.png';
@@ -7,17 +9,27 @@ class Images {
   static const String appleimage = 'assets/apple.png';
 
   static const String alsharqLogo = 'assets/al sharq guidelines-3 copy.png';
+
   /// Icons...........////
-   static const String myAgenda = "assets/icons/myagenda.png";
-   static const String schedule = "assets/icons/schedule.png";
-   static const String speaker = "assets/icons/speakers.png";
-   static const String sponser = "assets/icons/sponser.png";
-   static const String networking = "assets/icons/networking.png";
-   static const String forums = "assets/icons/forums.png";
-   static const String schedule11 = "assets/icons/schedule11.png";
+  static const String myAgenda = "assets/icons/myagenda.png";
+  static const String schedule = "assets/icons/schedule.png";
+  static const String speaker = "assets/icons/speakers.png";
+  static const String sponser = "assets/icons/sponser.png";
+  static const String networking = "assets/icons/networking.png";
+  static const String forums = "assets/icons/forums.png";
+  static const String schedule11 = "assets/icons/schedule11.png";
+  static const String drjohnthan = "assets/icons/dr.johnthan.png";
+  static const String session = "assets/icons/i.png";
 
-
-
-
-
+  /// Utility method for loading images with optional color
+  static Widget load(String path, {double? width, double? height, Color? color, BoxFit fit = BoxFit.contain}) {
+    return Image.asset(
+      path,
+      width: width,
+      height: height,
+      color: color, // agar color pass karenge to tint ho jayega
+      colorBlendMode: color != null ? BlendMode.srcIn : null,
+      fit: fit,
+    );
+  }
 }

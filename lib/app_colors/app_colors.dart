@@ -12,5 +12,8 @@ class AppColors{
   static const Color secondaryIndicoColor =  Color(0xff234D70);
   static const Color darkBlue =  Color(0xff1E40AF);
   static const Color lightBlue =  Color(0xff91C6FF);
-   
+  static const Color darkPurpleColor =  Color(0xff6B21A8);
+  static const Color lightPurpleColor =  Color(0xffF3E8FF);
+  static const Color lightred2 =  Color(0xffFFBEBE);
+
 }

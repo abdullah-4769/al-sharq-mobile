@@ -12,6 +12,7 @@ class CustomTextField extends StatefulWidget {
   final Color? suffixIconColor;
   final bool readOnly;
   final bool obscureText;
+  final VoidCallback? onSuffixIconPressed; // Added optional callback
 
   const CustomTextField({
     super.key,
@@ -24,6 +25,7 @@ class CustomTextField extends StatefulWidget {
     this.suffixIcon,
     this.suffixIconColor,
     this.readOnly = false,
+    this.onSuffixIconPressed, // Added to constructor
   });
 
   @override
@@ -48,7 +50,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           readOnly: widget.readOnly,
           style: TextStyle(
             fontSize: 16,
-            color: AppColors.darkgrey, // ✅ User input color changed here
+            color: AppColors.darkgrey,
           ),
           decoration: InputDecoration(
             hintText: widget.hintText,
@@ -86,8 +88,11 @@ class _CustomTextFieldState extends State<CustomTextField> {
               ),
               onPressed: () {
                 setState(() {
-                  _obscureText = !_obscureText;
+                  _obscureText = !_obscureText; // Toggle obscureText
                 });
+                if (widget.onSuffixIconPressed != null) {
+                  widget.onSuffixIconPressed!(); // Call custom callback if provided
+                }
               },
             )
                 : null,

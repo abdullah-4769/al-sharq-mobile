@@ -218,7 +218,12 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                 },
               ),
               SizedBox(height: height * 0.032),
-              CustomButton(text: 'Save & Continue', onPressed: _saveProfile),
+              CustomButton(text: 'Save & Continue', onPressed:(){
+                Navigator.push(context, MaterialPageRoute(builder: (context)=>HomeView()));
+
+              }
+             // _saveProfile
+              ),
               SizedBox(height: height * 0.070),
             ],
           ),
