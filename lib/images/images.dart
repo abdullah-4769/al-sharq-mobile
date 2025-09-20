@@ -20,6 +20,7 @@ class Images {
   static const String schedule11 = "assets/icons/schedule11.png";
   static const String drjohnthan = "assets/icons/dr.johnthan.png";
   static const String session = "assets/icons/i.png";
+  static const String sendIcons = "assets/icons/send_icon.png";
 
   /// Utility method for loading images with optional color
   static Widget load(String path, {double? width, double? height, Color? color, BoxFit fit = BoxFit.contain}) {
