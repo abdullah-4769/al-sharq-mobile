@@ -10,6 +10,7 @@ class CustomButton extends StatelessWidget {
   final Color? textColor;
   final double? height;
   final bool isLoading;
+  final String? imagePath; // <-- optional image
 
   const CustomButton({
     super.key,
@@ -19,6 +20,7 @@ class CustomButton extends StatelessWidget {
     this.textColor,
     this.height,
     this.isLoading = false,
+    this.imagePath, // <-- add here
   });
 
   @override
@@ -35,7 +37,7 @@ class CustomButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
           ),
           elevation: 0,
-          padding: EdgeInsets.zero,
+          padding: EdgeInsets.symmetric(horizontal: 16),
         ),
         child: isLoading
             ? const SizedBox(
@@ -46,14 +48,25 @@ class CustomButton extends StatelessWidget {
             strokeWidth: 2,
           ),
         )
-            : AppText(
-          text:
-          text,
-
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: textColor ?? Colors.white,
-
+            : Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (imagePath != null) ...[
+              Image.asset(
+                imagePath!,
+                height: 20,
+                width: 20,
+              ),
+              const SizedBox(width: 8),
+            ],
+            AppText(
+              text: text,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: textColor ?? Colors.white,
+            ),
+          ],
         ),
       ),
     );

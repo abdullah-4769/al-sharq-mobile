@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../app_colors/app_colors.dart';
-import '../../../custom_widgets/app_text.dart';
+import '../../app_colors/app_colors.dart';
+import '../../custom_widgets/app_text.dart';
 
 class QuickAccessItem extends StatefulWidget {
   final String imagePath;
@@ -28,9 +28,9 @@ class _QuickAccessItemState extends State<QuickAccessItem> {
 
   @override
   Widget build(BuildContext context) {
-    Color containerColor = _isSelected ? AppColors.primaryColor : Colors.white;
-    Color titleColor = _isSelected ? AppColors.whiteColor : AppColors.blackColor;
-    Color subtitleColor = _isSelected ? AppColors.whiteColor : AppColors.darkgrey;
+    Color containerColor = _isSelected ? AppColors.containerGreyColor : AppColors.gridContainer;
+    Color titleColor = _isSelected ? AppColors.blackColor : AppColors.blackColor;
+    Color subtitleColor = _isSelected ? AppColors.blackColor : AppColors.darkgrey;
 
     return InkWell(
       onTap: () {

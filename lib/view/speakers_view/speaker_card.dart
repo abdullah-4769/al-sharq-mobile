@@ -1,11 +1,18 @@
+import 'package:al_sharq_conference/app_colors/app_colors.dart';
+import 'package:al_sharq_conference/custom_widgets/custom_button.dart';
+import 'package:al_sharq_conference/view/speakers_view/speaker_details_view.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+
+import '../../../images/images.dart';
 
 class SpeakerCard extends StatelessWidget {
   final String name;
   final String title;
   final String category;
   final String sessions;
-  final String imageUrl;
+
   final String description;
 
   const SpeakerCard({
@@ -13,7 +20,7 @@ class SpeakerCard extends StatelessWidget {
     required this.title,
     required this.category,
     required this.sessions,
-    required this.imageUrl,
+   
     required this.description,
     super.key,
   });
@@ -30,7 +37,7 @@ class SpeakerCard extends StatelessWidget {
             // Speaker Image
             CircleAvatar(
               radius: 25,
-              backgroundImage: NetworkImage(imageUrl),
+              backgroundImage: AssetImage(Images.drjohnthan),
             ),
             const SizedBox(width: 12),
             // Speaker Details
@@ -85,12 +92,17 @@ class SpeakerCard extends StatelessWidget {
                     children: [
 
                       const Spacer(),
+                      CustomButton(text: "Chat with $name",
+                        onPressed: (){
+
+                        },
+                      ),
                       ElevatedButton(
                         onPressed: () {
                           // Handle chat functionality
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[900],
+                          backgroundColor: AppColors.primaryColor,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.0),
                           ),

@@ -21,6 +21,12 @@ class Images {
   static const String drjohnthan = "assets/icons/dr.johnthan.png";
   static const String session = "assets/icons/i.png";
   static const String sendIcons = "assets/icons/send_icon.png";
+  static const String linkedIn = "assets/icons/linkedin.png";
+  static const String website = "assets/icons/website.png";
+  static const String mailimage = "assets/icons/mail.png";
+  static const String linkedin2 = "assets/icons/linkedin2.png";
+  static const String twitterIcon = "assets/icons/twitter.png";
+  static const String youtube = "assets/icons/youtube.png";
 
   /// Utility method for loading images with optional color
   static Widget load(String path, {double? width, double? height, Color? color, BoxFit fit = BoxFit.contain}) {

@@ -15,5 +15,7 @@ class AppColors{
   static const Color darkPurpleColor =  Color(0xff6B21A8);
   static const Color lightPurpleColor =  Color(0xffF3E8FF);
   static const Color lightred2 =  Color(0xffFFBEBE);
+  static const Color containerGreyColor =  Color(0xffD4D4D4);
+  static const Color gridContainer =  Color(0xfffafcff);
 
 }

@@ -40,8 +40,10 @@ dependencies:
   pinput: ^5.0.2
   image_picker: ^1.2.0
   permission_handler: ^12.0.1
-  apivideo_live_stream: ^1.2.0
-  wakelock_plus: ^1.4.0
+  fluttertoast: ^9.0.0
+  http: ^1.5.0
+  another_flushbar: ^1.12.32
+  provider: ^6.1.5+1
 
 
 dev_dependencies:

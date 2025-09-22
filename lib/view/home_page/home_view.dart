@@ -1,16 +1,19 @@
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
-import 'package:al_sharq_conference/view/home_page/forum_chat/forum_chat.dart';
-import 'package:al_sharq_conference/view/home_page/home_pages/quick_access_item.dart';
-import 'package:al_sharq_conference/view/home_page/my_agenda_view/my_agenda_view.dart';
-import 'package:al_sharq_conference/view/home_page/seesion_details_view/session_detail_view.dart';
-import 'package:al_sharq_conference/view/home_page/speakers_view/speaker_view.dart';
+import 'package:al_sharq_conference/view/home_page/quick_access_item.dart';
+import 'package:al_sharq_conference/view/networking_view/networking_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 
-import '../../../app_colors/app_colors.dart';
-import '../../../custom_widgets/app_text.dart';
-import '../../../images/images.dart';
+import '../../app_colors/app_colors.dart';
+import '../../custom_widgets/app_text.dart';
+import '../../images/images.dart';
+import '../conference_schedule_view/conference_schedule_view.dart';
+import '../forum_chat/forum_chat.dart';
 import '../live_chat_session_view/live_chat_session_view.dart';
+import '../my_agenda_view/my_agenda_view.dart';
+import '../seesion_details_view/session_detail_view.dart';
+import '../speakers_view/speaker_view.dart';
+import '../sponser_exhibitors/sponser_exhibitors_view.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -160,14 +163,19 @@ class HomeView extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryColor,
-                          borderRadius: BorderRadius.circular(8),
+                      InkWell(
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => LiveSessionScreen()));
+                        },
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.mic, color: Colors.white, size: 20),
                         ),
-                        child: const Icon(Icons.mic, color: Colors.white, size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -226,10 +234,14 @@ class HomeView extends StatelessWidget {
                       },
                     ),
                     QuickAccessItem(
+
                       imagePath: Images.schedule,
                       title: 'Schedule',
                       subtitle: 'Full program',
                       iconBackgroundColor: Colors.blue.shade100,
+                      onTap: (){
+                        Get.to(ConferenceScheduleScreen());
+                      },
                     ),
                     QuickAccessItem(
                       imagePath: Images.speaker,
@@ -241,6 +253,9 @@ class HomeView extends StatelessWidget {
                       },
                     ),
                     QuickAccessItem(
+                      onTap: (){
+                        Get.to(SponsorsExhibitorsScreen());
+                      },
                       imagePath: Images.sponser,
                       title: 'Sponsors',
                       subtitle: 'Partners & exhibits',
@@ -251,9 +266,10 @@ class HomeView extends StatelessWidget {
                       title: 'Networking',
                       subtitle: 'Connect & chat',
                       iconBackgroundColor: Colors.purple.shade100,
-                      onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => LiveSessionScreen()));
+                      onTap: (){
+                        Get.to(NetworkingScreen());
                       },
+
                     ),
                     QuickAccessItem(
                       imagePath: Images.forums,
