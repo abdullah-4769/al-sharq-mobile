@@ -1,8 +1,14 @@
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:al_sharq_conference/custom_widgets/app_text.dart';
 import 'package:al_sharq_conference/images/images.dart';
+import 'package:al_sharq_conference/participants_view/conference_schedule_view/conference_schedule_view.dart';
+import 'package:al_sharq_conference/participants_view/home_page/home_view.dart';
+import 'package:al_sharq_conference/participants_view/my_agenda_view/my_agenda_view.dart';
+import 'package:al_sharq_conference/participants_view/qr_code_scanner/qr_code_scanner_view.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart'; // Correct import for SVG
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart'; // Correct import for SVG
 
 class CustomAppDrawer extends StatelessWidget {
   const CustomAppDrawer({super.key});
@@ -65,25 +71,25 @@ class CustomAppDrawer extends StatelessWidget {
                   icon: Icons.home_outlined,
                   title: "Home",
                   color: Colors.blue,
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => Get.to(HomeView()),
                 ),
                 _buildEnhancedListTile(
                   icon: Icons.schedule_outlined,
                   title: "Conference Schedule",
                   color: Colors.orange,
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => Get.to(ConferenceScheduleScreen()),
                 ),
                 _buildEnhancedListTile(
                   icon: Icons.event_note_outlined,
                   title: "My Agenda",
                   color: Colors.green,
-                  onTap: () => Navigator.pop(context),
+                  onTap: () =>Get.to(MyAgendaScreen()),
                 ),
                 _buildEnhancedListTile(
                   icon: Icons.qr_code_scanner_outlined,
                   title: "Scan QR Code",
                   color: Colors.purple,
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => Get.to(QRPassScreen()),
                 ),
 
                 // Divider

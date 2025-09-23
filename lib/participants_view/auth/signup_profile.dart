@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:al_sharq_conference/custom_widgets/app_text.dart';
 import 'package:al_sharq_conference/custom_widgets/form_label.dart';
-import 'package:al_sharq_conference/view/home_page/home_view.dart';
+import 'package:al_sharq_conference/participants_view/home_page/home_view.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../app_colors/app_colors.dart';

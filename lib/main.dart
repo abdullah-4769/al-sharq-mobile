@@ -1,5 +1,4 @@
-import 'package:al_sharq_conference/view/splash_view/dummy.dart';
-import 'package:al_sharq_conference/view/splash_view/splash_view.dart';
+import 'package:al_sharq_conference/participants_view/splash_view/splash_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_navigation/src/root/get_material_app.dart';
 

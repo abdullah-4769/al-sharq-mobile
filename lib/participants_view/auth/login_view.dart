@@ -1,5 +1,5 @@
-import 'package:al_sharq_conference/view/auth/forget_password_view.dart';
-import 'package:al_sharq_conference/view/auth/signup_view.dart';
+import 'package:al_sharq_conference/participants_view/auth/forget_password_view.dart';
+import 'package:al_sharq_conference/participants_view/auth/signup_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';

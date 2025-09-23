@@ -7,7 +7,8 @@ import '../../custom_widgets/custom_button.dart';
 import '../../custom_widgets/custom_text_field.dart';
 
 class ConferenceScheduleScreen extends StatelessWidget {
-  const ConferenceScheduleScreen({super.key});
+   ConferenceScheduleScreen({super.key});
+  TextEditingController searchController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -29,15 +30,32 @@ class ConferenceScheduleScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔍 Search Field
-            CustomTextField(
-              hintText: "Search",
-              suffixIcon: Icons.filter_list,
-              suffixIconColor: AppColors.primaryColor,
+            Row(
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: CustomTextField(
+                    hintText: "Search",
+                    controller: searchController,
+                    suffixIcon: Icons.search,
+                  ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 50,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Icon(Icons.tune, color: AppColors.primaryColor),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
-            // 📌 My Agenda Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

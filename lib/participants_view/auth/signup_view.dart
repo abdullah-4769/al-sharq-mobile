@@ -1,7 +1,7 @@
 import 'package:al_sharq_conference/images/images.dart';
-import 'package:al_sharq_conference/view/auth/login_view.dart';
-import 'package:al_sharq_conference/view/auth/signup_profile.dart';
-import 'package:al_sharq_conference/view/auth/verification_view.dart';
+import 'package:al_sharq_conference/participants_view/auth/login_view.dart';
+import 'package:al_sharq_conference/participants_view/auth/signup_profile.dart';
+import 'package:al_sharq_conference/participants_view/auth/verification_view.dart';
 import 'package:flutter/material.dart';
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:get/get.dart';

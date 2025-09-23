@@ -1,4 +1,4 @@
-import 'package:al_sharq_conference/view/auth/reset_password_view.dart';
+import 'package:al_sharq_conference/participants_view/auth/reset_password_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../app_colors/app_colors.dart';

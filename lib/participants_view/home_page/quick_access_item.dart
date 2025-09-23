@@ -28,7 +28,7 @@ class _QuickAccessItemState extends State<QuickAccessItem> {
 
   @override
   Widget build(BuildContext context) {
-    Color containerColor = _isSelected ? AppColors.containerGreyColor : AppColors.gridContainer;
+    Color containerColor = _isSelected ? AppColors.containerGreyColor : AppColors.whiteColor;
     Color titleColor = _isSelected ? AppColors.blackColor : AppColors.blackColor;
     Color subtitleColor = _isSelected ? AppColors.blackColor : AppColors.darkgrey;
 

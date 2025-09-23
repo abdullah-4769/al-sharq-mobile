@@ -1,6 +1,8 @@
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
-import 'package:al_sharq_conference/view/home_page/quick_access_item.dart';
-import 'package:al_sharq_conference/view/networking_view/networking_view.dart';
+import 'package:al_sharq_conference/participants_view/forum_chat/chat_list_view.dart';
+import 'package:al_sharq_conference/participants_view/home_page/quick_access_item.dart';
+import 'package:al_sharq_conference/participants_view/networking_view/networking_view.dart';
+import 'package:al_sharq_conference/participants_view/venue_map/venue_map_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/route_manager.dart';
 
@@ -8,9 +10,13 @@ import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../images/images.dart';
 import '../conference_schedule_view/conference_schedule_view.dart';
+import '../faq_view/faq_view.dart';
 import '../forum_chat/forum_chat.dart';
+import '../forum_chat/forum_list_view.dart';
+import '../forum_chat/join_forum_view.dart';
 import '../live_chat_session_view/live_chat_session_view.dart';
 import '../my_agenda_view/my_agenda_view.dart';
+import '../qr_code_scanner/qr_code_scanner_view.dart';
 import '../seesion_details_view/session_detail_view.dart';
 import '../speakers_view/speaker_view.dart';
 import '../sponser_exhibitors/sponser_exhibitors_view.dart';
@@ -277,8 +283,9 @@ class HomeView extends StatelessWidget {
                       subtitle: 'Discussions',
                       iconBackgroundColor: Colors.teal.shade100,
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => ForumChatScreen()));
-                      },
+                        Get.to(ForumsListScreen());
+
+                      }
                     ),
                   ],
                 ),
@@ -294,28 +301,44 @@ class HomeView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Tools & Support Items
-                _buildSupportItem(
-                  icon: Icons.qr_code,
-                  title: 'QR Code Pass',
-                  subtitle: 'Entry & check-in',
-                  color: Colors.grey.shade100,
-                  iconColor: Colors.grey.shade700,
+                InkWell(
+                  onTap: (){
+                    Get.to(QRPassScreen());
+                  },
+                  child: _buildSupportItem(
+                    icon: Icons.qr_code,
+                    title: 'QR Code Pass',
+                    subtitle: 'Entry & check-in',
+                    color: Colors.grey.shade100,
+                    iconColor: Colors.grey.shade700,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                _buildSupportItem(
-                  icon: Icons.map,
-                  title: 'Venue Maps',
-                  subtitle: 'Navigation & locations',
-                  color: Colors.red.shade50,
-                  iconColor: Colors.red,
+                InkWell(
+                  onTap: (){
+                    Get.to(VenueMapsScreen());
+                  },
+                  child: _buildSupportItem(
+
+                    icon: Icons.map,
+                    title: 'Venue Maps',
+                    subtitle: 'Navigation & locations',
+                    color: Colors.red.shade50,
+                    iconColor: Colors.red,
+                  ),
                 ),
                 const SizedBox(height: 12),
-                _buildSupportItem(
-                  icon: Icons.help,
-                  title: 'FAQ & Support',
-                  subtitle: 'Help & guidance',
-                  color: Colors.orange.shade50,
-                  iconColor: Colors.orange,
+                InkWell(
+                  onTap: (){
+                    Get.to(FAQSupportScreen());
+                  },
+                  child: _buildSupportItem(
+                    icon: Icons.help,
+                    title: 'FAQ & Support',
+                    subtitle: 'Help & guidance',
+                    color: Colors.orange.shade50,
+                    iconColor: Colors.orange,
+                  ),
                 ),
                 const SizedBox(height: 20),
               ],

@@ -1,5 +1,5 @@
-import 'package:al_sharq_conference/view/live_chat_session_view/session_content.dart';
-import 'package:al_sharq_conference/view/live_chat_session_view/video_player_widget.dart';
+import 'package:al_sharq_conference/participants_view/live_chat_session_view/session_content.dart';
+import 'package:al_sharq_conference/participants_view/live_chat_session_view/video_player_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
 import '../../../app_colors/app_colors.dart';

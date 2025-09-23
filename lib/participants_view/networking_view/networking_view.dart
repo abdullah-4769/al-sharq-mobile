@@ -1,5 +1,7 @@
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
-import 'package:al_sharq_conference/view/message_view/message_view.dart';
+import 'package:al_sharq_conference/participants_view/forum_chat/chat_list_view.dart';
+import 'package:al_sharq_conference/participants_view/forum_chat/forum_chat.dart';
+import 'package:al_sharq_conference/participants_view/message_view/message_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
@@ -8,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_text_field.dart';
+import '../../../images/images.dart';
 
 // Person class definition
 class Person {
@@ -26,6 +29,48 @@ class Person {
     required this.imageUrl,
     required this.status,
   });
+}
+
+// Chat Manager to handle global chat state
+class ChatManager {
+  static final ChatManager _instance = ChatManager._internal();
+  factory ChatManager() => _instance;
+  ChatManager._internal();
+
+  List<ChatContact> _chatContacts = [];
+  List<ChatContact> get chatContacts => _chatContacts;
+
+  void addOrUpdateChat(Person person) {
+    final existingIndex = _chatContacts.indexWhere((contact) => contact.name == person.name);
+
+    if (existingIndex != -1) {
+      // Update existing chat
+      _chatContacts[existingIndex] = _chatContacts[existingIndex].copyWith(
+        lastMessage: 'Started chatting',
+        timestamp: 'Just now',
+        isOnline: true,
+      );
+    } else {
+      // Add new chat
+      _chatContacts.insert(0, ChatContact(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: person.name,
+        lastMessage: 'Started chatting',
+        timestamp: 'Just now',
+        unreadCount: 0,
+        isOnline: true,
+        avatar: Images.drjohnthan,
+      ));
+    }
+  }
+
+  ChatContact? getChatContact(String personName) {
+    try {
+      return _chatContacts.firstWhere((contact) => contact.name == personName);
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 // Main Networking Screen
@@ -120,100 +165,179 @@ class _NetworkingScreenState extends State<NetworkingScreen>
       backgroundColor: AppColors.lightGreyColor,
       appBar: AppBar(
         backgroundColor: AppColors.whiteColor,
-
+        elevation: 0,
         title: AppText(
           text: 'Networking',
           fontSize: 18,
           fontWeight: FontWeight.w600,
           color: AppColors.blackColor,
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: Icon(Icons.tune, color: AppColors.primaryColor),
-          ),
-        ],
+
       ),
       body: Column(
         children: [
           // Search Bar
-          Container(
-            color: AppColors.whiteColor,
-            padding: EdgeInsets.all(16),
-            child: CustomTextField(
-              controller: _searchController,
-              hintText: 'Search...',
-              onChanged: (value) {
-                // Implement search functionality
-              },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18.0),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: CustomTextField(
+                    hintText: "Search",
+                    controller: _searchController,
+                    suffixIcon: Icons.search,
+                  ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Container(
+                    height: 50,
+                    width: 40,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Icon(Icons.tune, color: AppColors.primaryColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Chat List Banner
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ChatListScreen()),
+              );
+            },
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.lightred,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.chat,
+                      color: AppColors.whiteColor,
+                      size: 20,
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: AppText(
+                      text: 'Chats List',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.blackColor,
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.darkgrey,
+                    size: 16,
+                  ),
+                ],
+              ),
             ),
           ),
 
-          // Chat List Banner
+          SizedBox(height: 8),
+
+          // Custom Tab Bar with better design
           Container(
-            margin: EdgeInsets.all(16),
-            padding: EdgeInsets.all(16),
+            margin: EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: AppColors.lightred,
+              color: AppColors.lightGreyColor,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.chat,
-                    color: AppColors.whiteColor,
-                    size: 20,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      _tabController.animateTo(0);
+                      setState(() {});
+                    },
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: _tabController.index == 0
+                            ? AppColors.primaryColor
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: AppText(
+                          text: 'Directory',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _tabController.index == 0
+                              ? AppColors.whiteColor
+                              : AppColors.darkgrey,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                SizedBox(width: 12),
-                AppText(
-                  text: 'Chats List',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.blackColor,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      _tabController.animateTo(1);
+                      setState(() {});
+                    },
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: _tabController.index == 1
+                            ? AppColors.primaryColor
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: AppText(
+                          text: 'My Connections',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _tabController.index == 1
+                              ? AppColors.whiteColor
+                              : AppColors.darkgrey,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
 
-          // Tab Bar
-          Container(
-            color: AppColors.whiteColor,
-            child: TabBar(
-              controller: _tabController,
-              labelColor: AppColors.whiteColor,
-              unselectedLabelColor: AppColors.darkgrey,
-              indicator: BoxDecoration(
-                color: AppColors.primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              dividerColor: Colors.transparent,
-              tabs: [
-                Tab(text: 'Directory'),
-                Tab(text: 'My Connections'),
-              ],
-            ),
-          ),
+          SizedBox(height: 16),
 
           // Speaker Count
           Container(
             width: double.infinity,
-            color: AppColors.whiteColor,
-            padding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+            padding: EdgeInsets.symmetric(horizontal: 16),
             child: AppText(
               text: '275 Speakers Showing',
               fontSize: 14,
+              fontWeight: FontWeight.w500,
               color: AppColors.darkgrey,
             ),
           ),
+
+          SizedBox(height: 8),
 
           // Tab View
           Expanded(
@@ -250,6 +374,35 @@ class _NetworkingScreenState extends State<NetworkingScreen>
     );
   }
 
+  void _startChat(Person person) {
+    // Add/Update chat in ChatManager
+    ChatManager().addOrUpdateChat(person);
+
+    // Get or create chat contact
+    ChatContact? contact = ChatManager().getChatContact(person.name);
+
+    if (contact == null) {
+      // Create new contact if doesn't exist
+      contact = ChatContact(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: person.name,
+        lastMessage: 'Started chatting',
+        timestamp: 'Just now',
+        unreadCount: 0,
+        isOnline: true,
+        avatar: Images.drjohnthan,
+      );
+    }
+
+    // Navigate to individual chat
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => IndividualChatScreen(contact: contact!),
+      ),
+    );
+  }
+
   Widget _buildPersonCard(Person person) {
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -260,7 +413,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
@@ -320,11 +473,10 @@ class _NetworkingScreenState extends State<NetworkingScreen>
               width: double.infinity,
               height: 40,
               child: ElevatedButton(
-                onPressed: () {
-                  Get.to(MessagesScreen());
-                },
+                onPressed: () => _startChat(person),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryColor,
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -399,7 +551,30 @@ class _NetworkingScreenState extends State<NetworkingScreen>
           ),
         );
       default:
-        return Container(); // Default case for safety
+        return Container();
     }
+  }
+}
+
+// Extension to add copyWith method to ChatContact
+extension ChatContactExtension on ChatContact {
+  ChatContact copyWith({
+    String? id,
+    String? name,
+    String? lastMessage,
+    String? timestamp,
+    int? unreadCount,
+    bool? isOnline,
+    String? avatar,
+  }) {
+    return ChatContact(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      lastMessage: lastMessage ?? this.lastMessage,
+      timestamp: timestamp ?? this.timestamp,
+      unreadCount: unreadCount ?? this.unreadCount,
+      isOnline: isOnline ?? this.isOnline,
+      avatar: avatar ?? this.avatar,
+    );
   }
 }
