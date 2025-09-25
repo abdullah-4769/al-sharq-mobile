@@ -11,6 +11,7 @@ import '../../custom_widgets/conference_logo.dart';
 import '../../custom_widgets/custom_button.dart';
 import '../../custom_widgets/custom_text_field.dart';
 import '../../custom_widgets/form_label.dart';
+import 'organizer_signup_profile.dart';
 
 class OrganizerSignupScreen extends StatefulWidget {
    OrganizerSignupScreen({super.key});
@@ -160,7 +161,7 @@ class _OrganizerSignupScreenState extends State<OrganizerSignupScreen> {
                     CustomButton(
                       text: "Create Account",
                       onPressed: () {
-                        Get.to(SetupProfileScreen());
+                        Get.to(OrganizerSignupProfile());
                       },
                     ),
                     SizedBox(height: height * 0.0360),

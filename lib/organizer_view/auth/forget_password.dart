@@ -47,10 +47,10 @@ class _OrganizerForgotPasswordScreenState extends State<OrganizerForgotPasswordS
               padding: EdgeInsets.symmetric(
                 horizontal:
                 MediaQuery.of(context).size.width *
-                    0.06, // 10% of screen width
+                    0.06,
                 vertical:
                 MediaQuery.of(context).size.height *
-                    0.02, // 2% of screen height
+                    0.02,
               ),
               child: Form(
                 key: _formKey,

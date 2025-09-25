@@ -6,11 +6,13 @@ import 'app_text.dart';
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
-  final Color? backgroundColor;
-  final Color? textColor;
+  final Color? backgroundColor; // optional
+  final Color? textColor; // optional
   final double? height;
   final bool isLoading;
-  final String? imagePath; // <-- optional image
+  final String? imagePath; // optional image
+  final Color? borderColor; // optional border
+  final double? borderWidth; // optional border width
 
   const CustomButton({
     super.key,
@@ -20,7 +22,9 @@ class CustomButton extends StatelessWidget {
     this.textColor,
     this.height,
     this.isLoading = false,
-    this.imagePath, // <-- add here
+    this.imagePath,
+    this.borderColor,
+    this.borderWidth,
   });
 
   @override
@@ -31,13 +35,16 @@ class CustomButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.primaryColor,
-          foregroundColor: Colors.white,
+          backgroundColor: backgroundColor ?? AppColors.primaryColor, // default primaryColor
+          foregroundColor: textColor ?? Colors.white, // default white
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
+            side: borderColor != null
+                ? BorderSide(color: borderColor!, width: borderWidth ?? 1.0)
+                : BorderSide.none,
           ),
           elevation: 0,
-          padding: EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
         child: isLoading
             ? const SizedBox(
@@ -64,7 +71,7 @@ class CustomButton extends StatelessWidget {
               text: text,
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: textColor ?? Colors.white,
+              color: textColor ?? Colors.white, // default white
             ),
           ],
         ),

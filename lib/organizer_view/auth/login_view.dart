@@ -1,3 +1,6 @@
+import 'package:al_sharq_conference/organizer_view/auth/forget_password.dart';
+import 'package:al_sharq_conference/organizer_view/auth/signup_view.dart';
+import 'package:al_sharq_conference/organizer_view/organizer_dashboard/organizer_dashboard.dart';
 import 'package:al_sharq_conference/participants_view/auth/forget_password_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/signup_view.dart';
 import 'package:flutter/material.dart';
@@ -147,7 +150,7 @@ class _LoginScreenState extends State<OrganizerLoginScreen> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const ForgotPasswordScreen(),
+                                builder: (context) => const OrganizerForgotPasswordScreen(),
                               ),
                             );
                           },
@@ -161,7 +164,9 @@ class _LoginScreenState extends State<OrganizerLoginScreen> {
                       ],
                     ),
                     SizedBox(height: height * 0.016),
-                    CustomButton(text: 'Sign In', onPressed: _login),
+                    CustomButton(text: 'Sign In', onPressed: (){
+                      Get.to(OrganizerDashboard());
+                    }),
                     SizedBox(height: height * 0.036),
                     Row(
                       children: [
@@ -204,7 +209,7 @@ class _LoginScreenState extends State<OrganizerLoginScreen> {
                         AppText(text: "Don't Have an account?", fontSize: 16),
                         InkWell(
                           onTap: () {
-                            Get.to(const SignupScreen());
+                            Get.to( OrganizerSignupScreen());
                           },
                           child: AppText(
                             text: "Sign Up",

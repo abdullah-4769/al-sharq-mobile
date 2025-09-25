@@ -1,4 +1,5 @@
 import 'package:al_sharq_conference/images/images.dart';
+import 'package:al_sharq_conference/organizer_view/auth/login_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/login_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/signup_profile.dart';
 import 'package:al_sharq_conference/participants_view/auth/verification_view.dart';
@@ -76,6 +77,17 @@ class _SignupScreenState extends State<SignupScreen> {
                             fontSize: 20,
                             fontWeight: FontWeight.w500,
                             color: AppColors.primaryColor,
+                          ),
+                          InkWell(
+                            onTap: (){
+                              Get.to(OrganizerLoginScreen());
+                            },
+                            child: AppText(
+                              text: "Switch to Organizer",
+                              fontSize: 20,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.primaryColor,
+                            ),
                           ),
                         ],
                       ),

@@ -7,6 +7,7 @@ class Images {
   static const String googleimage = 'assets/google.png';
   static const String facebookimage = 'assets/Facebook.png';
   static const String appleimage = 'assets/apple.png';
+  static const String stages = 'assets/stages.png';
 
   static const String alsharqLogo = 'assets/al sharq guidelines-3 copy.png';
 
