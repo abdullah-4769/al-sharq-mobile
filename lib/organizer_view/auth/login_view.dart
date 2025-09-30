@@ -94,11 +94,9 @@ class _LoginScreenState extends State<OrganizerLoginScreen> {
                       hintText: 'Enter Your Password',
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      suffixIcon: _obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      suffixIcon: _obscurePassword ? Icons.visibility : Icons.visibility_off,
                       suffixIconColor: Colors.grey[400],
-                      onSuffixIconPressed: () {
+                      onSuffixIconTap: () {
                         setState(() {
                           _obscurePassword = !_obscurePassword;
                         });

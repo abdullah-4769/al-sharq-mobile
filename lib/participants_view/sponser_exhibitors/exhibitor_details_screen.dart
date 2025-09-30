@@ -484,7 +484,7 @@ class ExhibitorDetailScreen extends StatelessWidget {
                 AppText(
                   text: description,
                   fontSize: 12,
-                  color: AppColors.darkgrey,
+                  color: AppColors  .darkgrey,
                 ),
               ],
             ),

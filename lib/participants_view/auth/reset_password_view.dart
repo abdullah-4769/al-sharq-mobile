@@ -18,6 +18,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
 
   void _resetPassword() {
     if (_formKey.currentState!.validate()) {
@@ -76,17 +77,22 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
                     const FormLabel(text: "New Password", isRequired: true),
                     CustomTextField(
-                      hintText: "*******",
+                      hintText: 'Enter Your Password',
                       controller: _newPasswordController,
-                      obscureText: true,
-                      suffixIcon: Icons.visibility,
+                      obscureText: _obscurePassword,
+                      suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       suffixIconColor: Colors.grey[400],
+                      onSuffixIconTap: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter new password';
+                          return 'Please enter your password';
                         }
-                        if (value.length < 8) {
-                          return 'Password must be at least 8 characters long';
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
                         }
                         return null;
                       },
@@ -98,17 +104,22 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       isRequired: true,
                     ),
                     CustomTextField(
-                      hintText: "*******",
+                      hintText: 'Enter Your Password',
                       controller: _confirmPasswordController,
-                      obscureText: true,
-                      suffixIcon: Icons.visibility,
+                      obscureText: _obscurePassword,
+                      suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       suffixIconColor: Colors.grey[400],
+                      onSuffixIconTap: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
+                          return 'Please enter your password';
                         }
-                        if (value != _newPasswordController.text) {
-                          return 'Passwords do not match';
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
                         }
                         return null;
                       },

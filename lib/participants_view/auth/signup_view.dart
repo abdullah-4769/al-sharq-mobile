@@ -3,10 +3,11 @@ import 'package:al_sharq_conference/organizer_view/auth/login_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/login_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/signup_profile.dart';
 import 'package:al_sharq_conference/participants_view/auth/verification_view.dart';
+import 'package:al_sharq_conference/speaker_view/auth/login_view.dart';
+import 'package:al_sharq_conference/sponser_view/auth/login_view.dart';
 import 'package:flutter/material.dart';
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/conference_logo.dart';
 import '../../custom_widgets/custom_button.dart';
@@ -26,6 +27,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   @override
   void dispose() {
@@ -38,7 +41,9 @@ class _SignupScreenState extends State<SignupScreen> {
 
   void _signup() {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Creating account...')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Creating account...')),
+      );
     }
   }
 
@@ -47,7 +52,7 @@ class _SignupScreenState extends State<SignupScreen> {
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
     return Scaffold(
-      body: SingleChildScrollView( // Moved SingleChildScrollView to the top level
+      body: SingleChildScrollView(
         child: Column(
           children: [
             const ConferenceLogo(),
@@ -78,16 +83,27 @@ class _SignupScreenState extends State<SignupScreen> {
                             fontWeight: FontWeight.w500,
                             color: AppColors.primaryColor,
                           ),
-                          InkWell(
-                            onTap: (){
-                              Get.to(OrganizerLoginScreen());
-                            },
-                            child: AppText(
-                              text: "Switch to Organizer",
-                              fontSize: 20,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.primaryColor,
-                            ),
+                          const SizedBox(height: 16),
+
+                          /// Role Buttons
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              _roleButton(
+                                label: "Organizer View",
+                                onTap: () => Get.to(OrganizerLoginScreen()),
+                              ),
+                              _roleButton(
+                                label: "Speaker View",
+                                onTap: () => Get.to(SpeakerLoginScreen()),
+                              ),
+                              _roleButton(
+                                label: "Sponsor View",
+                                onTap: () => Get.to(SponserLoginScreen()),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -120,20 +136,27 @@ class _SignupScreenState extends State<SignupScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!value.contains('@')) {
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
                       },
                     ),
                     SizedBox(height: height * 0.010),
+
+                    /// Password
                     const FormLabel(text: "Password", isRequired: true),
                     CustomTextField(
                       hintText: "*******",
                       controller: _passwordController,
-                      obscureText: true,
-                      suffixIcon: Icons.visibility,
+                      obscureText: !_isPasswordVisible,
+                      suffixIcon: _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                       suffixIconColor: Colors.grey[400],
+                      onSuffixIconTap: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your password';
@@ -147,16 +170,18 @@ class _SignupScreenState extends State<SignupScreen> {
                     const SizedBox(height: 10),
 
                     /// Confirm Password
-                    const FormLabel(
-                      text: "Confirm Password",
-                      isRequired: true,
-                    ),
+                    const FormLabel(text: "Confirm Password", isRequired: true),
                     CustomTextField(
                       hintText: "*******",
                       controller: _confirmPasswordController,
-                      obscureText: true,
-                      suffixIcon: Icons.visibility,
+                      obscureText: !_isConfirmPasswordVisible,
+                      suffixIcon: _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
                       suffixIconColor: Colors.grey[400],
+                      onSuffixIconTap: () {
+                        setState(() {
+                          _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                        });
+                      },
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please confirm your password';
@@ -172,7 +197,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     CustomButton(
                       text: "Create Account",
                       onPressed: () {
-                        Get.to(SetupProfileScreen());
+                        if (_formKey.currentState!.validate()) {
+                          Get.to(SetupProfileScreen());
+                        }
                       },
                     ),
                     SizedBox(height: height * 0.0360),
@@ -202,10 +229,9 @@ class _SignupScreenState extends State<SignupScreen> {
                       onPressed: () {},
                     ),
                     SizedBox(height: height * 0.016),
-
                     _buildSocialButton(
                       imagePath: Images.facebookimage,
-                      label: 'Continue with Google', // Corrected to 'Continue with Facebook' below
+                      label: 'Continue with Facebook',
                       onPressed: () {},
                     ),
                     SizedBox(height: height * 0.016),
@@ -216,6 +242,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     SizedBox(height: height * 0.056),
 
+                    /// Already have account
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -265,7 +292,7 @@ class _SignupScreenState extends State<SignupScreen> {
           height: 20,
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.error, color: Colors.red),
+          const Icon(Icons.error, color: Colors.red),
         ),
         label: AppText(
           text: label,
@@ -276,6 +303,28 @@ class _SignupScreenState extends State<SignupScreen> {
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: AppColors.lightGreyColor),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    );
+  }
+
+  Widget _roleButton({required String label, required VoidCallback onTap}) {
+    return SizedBox(
+      height: 40,
+      child: OutlinedButton(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: AppColors.primaryColor, width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.primaryColor,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
     );

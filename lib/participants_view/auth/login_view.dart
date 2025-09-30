@@ -2,7 +2,6 @@ import 'package:al_sharq_conference/participants_view/auth/forget_password_view.
 import 'package:al_sharq_conference/participants_view/auth/signup_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
@@ -35,9 +34,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() {
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Logging in...')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logging in...')),
+      );
     }
   }
 
@@ -69,7 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.primaryColor,
                     ),
                     const SizedBox(height: 48),
-                    const FormLabel(text: "Email Address ", isRequired: true),
+                    const FormLabel(text: "Email Address", isRequired: true),
                     CustomTextField(
                       suffixIcon: Icons.mail_outline,
                       hintText: 'Enter Your Email Address',
@@ -79,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!value.contains('@')) {
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
@@ -91,11 +90,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Enter Your Password',
                       controller: _passwordController,
                       obscureText: _obscurePassword,
-                      suffixIcon: _obscurePassword
-                          ? Icons.visibility
-                          : Icons.visibility_off,
+                      suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       suffixIconColor: Colors.grey[400],
-                      onSuffixIconPressed: () {
+                      onSuffixIconTap: () {
                         setState(() {
                           _obscurePassword = !_obscurePassword;
                         });
