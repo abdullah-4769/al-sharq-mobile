@@ -2,17 +2,22 @@ import 'package:al_sharq_conference/images/images.dart';
 import 'package:al_sharq_conference/organizer_view/auth/login_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/login_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/signup_profile.dart';
-import 'package:al_sharq_conference/participants_view/auth/verification_view.dart';
 import 'package:al_sharq_conference/speaker_view/auth/login_view.dart';
 import 'package:al_sharq_conference/sponser_view/auth/login_view.dart';
 import 'package:flutter/material.dart';
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:get/get.dart';
+
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/conference_logo.dart';
 import '../../custom_widgets/custom_button.dart';
 import '../../custom_widgets/custom_text_field.dart';
 import '../../custom_widgets/form_label.dart';
+
+import '../../data/request_models/sign_up_request_model.dart';
+import '../../data/response/api_response.dart';
+import '../../utils/app_validation.dart';
+import '../../view_model/auth/signup_view_model.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -22,6 +27,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final SignupViewModel _viewModel = Get.put(SignupViewModel());
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -39,11 +45,24 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _signup() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Creating account...')),
-      );
+  Future<void> _signup() async {
+    // First validate the form
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final model = SignupRequestModel(
+      name: _fullNameController.text.trim(),
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+      role: "participant",
+    );
+
+    await _viewModel.signup(model);
+
+    // Check if signup was successful using GetX reactive state
+    if (_viewModel.signupResponse.value.status == Status.COMPLETED) {
+      Get.off(() => const LoginScreen());
     }
   }
 
@@ -51,6 +70,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -93,15 +113,15 @@ class _SignupScreenState extends State<SignupScreen> {
                             children: [
                               _roleButton(
                                 label: "Organizer View",
-                                onTap: () => Get.to(OrganizerLoginScreen()),
+                                onTap: () => Get.to(const OrganizerLoginScreen()),
                               ),
                               _roleButton(
                                 label: "Speaker View",
-                                onTap: () => Get.to(SpeakerLoginScreen()),
+                                onTap: () => Get.to(const SpeakerLoginScreen()),
                               ),
                               _roleButton(
                                 label: "Sponsor View",
-                                onTap: () => Get.to(SponserLoginScreen()),
+                                onTap: () => Get.to(const SponserLoginScreen()),
                               ),
                             ],
                           ),
@@ -116,12 +136,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       hintText: "Enter your name",
                       controller: _fullNameController,
                       suffixIcon: Icons.person_3_outlined,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your full name';
-                        }
-                        return null;
-                      },
+                      validator: (value) => AppValidators.validateName(value),
+                      enabled: !_viewModel.isLoading.value,
                     ),
                     SizedBox(height: height * 0.010),
 
@@ -132,15 +148,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
                       suffixIcon: Icons.mail_outline,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
+                      validator: (value) => AppValidators.validateEmail(value),
+                      enabled: !_viewModel.isLoading.value,
                     ),
                     SizedBox(height: height * 0.010),
 
@@ -150,22 +159,17 @@ class _SignupScreenState extends State<SignupScreen> {
                       hintText: "*******",
                       controller: _passwordController,
                       obscureText: !_isPasswordVisible,
-                      suffixIcon: _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      suffixIcon: _isPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                       suffixIconColor: Colors.grey[400],
-                      onSuffixIconTap: () {
+                      onSuffixIconTap: _viewModel.isLoading.value ? null : () {
                         setState(() {
                           _isPasswordVisible = !_isPasswordVisible;
                         });
                       },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      validator: (value) => AppValidators.validatePassword(value),
+                      enabled: !_viewModel.isLoading.value,
                     ),
                     const SizedBox(height: 10),
 
@@ -175,33 +179,30 @@ class _SignupScreenState extends State<SignupScreen> {
                       hintText: "*******",
                       controller: _confirmPasswordController,
                       obscureText: !_isConfirmPasswordVisible,
-                      suffixIcon: _isConfirmPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      suffixIcon: _isConfirmPasswordVisible
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                       suffixIconColor: Colors.grey[400],
-                      onSuffixIconTap: () {
+                      onSuffixIconTap: _viewModel.isLoading.value ? null : () {
                         setState(() {
                           _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
                         });
                       },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
+                      validator: (value) => AppValidators.confirmPassword(
+                        value,
+                        _passwordController.text,
+                      ),
+                      enabled: !_viewModel.isLoading.value,
                     ),
                     const SizedBox(height: 32),
 
-                    CustomButton(
-                      text: "Create Account",
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          Get.to(SetupProfileScreen());
-                        }
-                      },
-                    ),
+                    /// Create Account Button with Obx for reactive state
+                    Obx(() => CustomButton(
+                      text: _viewModel.isLoading.value ? "Creating Account..." : "Create Account",
+                      isLoading: _viewModel.isLoading.value,
+                      onPressed: _viewModel.isLoading.value ? null : _signup,
+                    )),
+
                     SizedBox(height: height * 0.0360),
 
                     /// Divider
@@ -223,27 +224,27 @@ class _SignupScreenState extends State<SignupScreen> {
                     SizedBox(height: height * 0.0360),
 
                     /// Social Buttons
-                    _buildSocialButton(
+                    Obx(() => _buildSocialButton(
                       imagePath: Images.googleimage,
                       label: 'Continue with Google',
-                      onPressed: () {},
-                    ),
+                      onPressed: _viewModel.isLoading.value ? null : () {},
+                    )),
                     SizedBox(height: height * 0.016),
-                    _buildSocialButton(
+                    Obx(() => _buildSocialButton(
                       imagePath: Images.facebookimage,
                       label: 'Continue with Facebook',
-                      onPressed: () {},
-                    ),
+                      onPressed: _viewModel.isLoading.value ? null : () {},
+                    )),
                     SizedBox(height: height * 0.016),
-                    _buildSocialButton(
+                    Obx(() => _buildSocialButton(
                       imagePath: Images.appleimage,
                       label: 'Continue with Apple',
-                      onPressed: () {},
-                    ),
+                      onPressed: _viewModel.isLoading.value ? null : () {},
+                    )),
                     SizedBox(height: height * 0.056),
 
                     /// Already have account
-                    Row(
+                    Obx(() => Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         AppText(
@@ -252,7 +253,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           fontSize: 14,
                         ),
                         GestureDetector(
-                          onTap: () => Get.to(LoginScreen()),
+                          onTap: _viewModel.isLoading.value ? null : () => Get.to(const LoginScreen()),
                           child: AppText(
                             text: "Sign In",
                             color: AppColors.primaryColor,
@@ -261,7 +262,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           ),
                         ),
                       ],
-                    ),
+                    )),
                   ],
                 ),
               ),
@@ -279,7 +280,7 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget _buildSocialButton({
     required String imagePath,
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return SizedBox(
       width: double.infinity,

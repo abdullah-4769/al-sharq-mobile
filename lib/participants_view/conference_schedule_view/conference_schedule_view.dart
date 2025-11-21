@@ -1,14 +1,224 @@
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
+import 'package:al_sharq_conference/participants_view/my_agenda_view/my_agenda_view.dart';
 import 'package:flutter/material.dart';
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
 import '../../custom_widgets/custom_text_field.dart';
+import '../../data/response_models/participant_response_model/event_session_response_model.dart';
+import '../../utils/shared_preference.dart';
+import '../../view_model/participant_viewmodel/event_session_viewmodel.dart';
+import '../../view_model/participant_viewmodel/all_bookmark_sessions_viewmodel.dart';
+import '../seesion_details_view/session_detail.dart';
+import '../seesion_details_view/session_detail_view.dart';
 
-class ConferenceScheduleScreen extends StatelessWidget {
-   ConferenceScheduleScreen({super.key});
+class ConferenceScheduleScreen extends StatefulWidget {
+  const ConferenceScheduleScreen({super.key});
+
+  @override
+  State<ConferenceScheduleScreen> createState() => _ConferenceScheduleScreenState();
+}
+
+class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
   TextEditingController searchController = TextEditingController();
+  final EventSessionsViewModel sessionsController = Get.find<EventSessionsViewModel>();
+  final AllBookmarkedSessionsViewModel bookmarkViewModel = Get.put(AllBookmarkedSessionsViewModel());
+
+  int? _currentUserId;
+  int? _currentEventId;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _getUserData();
+
+    // Fetch sessions when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (sessionsController.allSessions.isEmpty) {
+        sessionsController.fetchEventSessions(context);
+      }
+    });
+  }
+
+  Future<void> _getUserData() async {
+    try {
+      _currentUserId = await SharedPrefsHelper.getUserId();
+      _currentEventId = await SharedPrefsHelper.getLatestEventId();
+      print('=== Retrieved user ID: $_currentUserId, event ID: $_currentEventId ===');
+
+      // Fetch bookmarked sessions count
+      if (_currentUserId != null && _currentEventId != null) {
+        bookmarkViewModel.fetchBookmarkedSessions(_currentUserId!, _currentEventId!);
+      }
+    } catch (e) {
+      print('=== Error getting user data: $e ===');
+    }
+  }
+
+  void _navigateToSessionDetails(int sessionId) {
+    print('=== Navigating to session details for ID: $sessionId ===');
+    Get.to(() => SessionDetailsScreen(sessionId: sessionId));
+  }
+
+  void _navigateToMyAgenda() {
+    Get.to(() => MyAgendaScreen());
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+  }
+
+  // Filter sessions based on search query
+  List<SessionModel> get _filteredSessions {
+    final allSessions = sessionsController.allSessions;
+    if (_searchQuery.isEmpty) {
+      return allSessions;
+    }
+
+    return allSessions.where((session) =>
+    session.sessionTitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+        (session.sessionDescription?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+        session.speakers.any((speaker) =>
+            speaker.fullName.toLowerCase().contains(_searchQuery.toLowerCase())
+        ) ||
+        (session.category?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
+        (session.location?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
+    ).toList();
+  }
+
+  // Group sessions by date
+  Map<String, List<SessionModel>> get _sessionsByDate {
+    final Map<String, List<SessionModel>> grouped = {};
+
+    for (final session in _filteredSessions) {
+      final dateKey = _getFormattedDate(session);
+      if (!grouped.containsKey(dateKey)) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey]!.add(session);
+    }
+
+    // Sort dates chronologically
+    final sortedDates = grouped.keys.toList()
+      ..sort((a, b) {
+        try {
+          final sessionA = _filteredSessions.firstWhere((s) => _getFormattedDate(s) == a);
+          final sessionB = _filteredSessions.firstWhere((s) => _getFormattedDate(s) == b);
+          return _getSessionDate(sessionA).compareTo(_getSessionDate(sessionB));
+        } catch (e) {
+          return a.compareTo(b);
+        }
+      });
+
+    final sortedMap = <String, List<SessionModel>>{};
+    for (final date in sortedDates) {
+      // Sort sessions within each date by time
+      final sessions = grouped[date]!;
+      sessions.sort((a, b) => _getSessionDate(a).compareTo(_getSessionDate(b)));
+      sortedMap[date] = sessions;
+    }
+
+    return sortedMap;
+  }
+
+  // Helper method to get formatted date from session
+  String _getFormattedDate(SessionModel session) {
+    try {
+      final times = session.duration.split(' - ');
+      if (times.isNotEmpty) {
+        final date = DateTime.parse(times[0]);
+        return '${_getWeekday(date)}, ${_getMonth(date)} ${date.day}, ${date.year}';
+      }
+      return 'Date TBD';
+    } catch (e) {
+      return 'Date TBD';
+    }
+  }
+
+  // Helper method to get session date for sorting
+  DateTime _getSessionDate(SessionModel session) {
+    try {
+      final times = session.duration.split(' - ');
+      if (times.isNotEmpty) {
+        return DateTime.parse(times[0]);
+      }
+      return DateTime.now();
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+
+  // Helper method to get formatted time
+  String _getFormattedTime(SessionModel session) {
+    try {
+      final times = session.duration.split(' - ');
+      if (times.length >= 2) {
+        final start = DateTime.parse(times[0]);
+        final end = DateTime.parse(times[1]);
+        return '${_formatTime(start)} - ${_formatTime(end)}';
+      }
+      return 'TBD';
+    } catch (e) {
+      return 'TBD';
+    }
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour % 12;
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    final period = dateTime.hour < 12 ? 'AM' : 'PM';
+    final displayHour = hour == 0 ? 12 : hour;
+    return '$displayHour:$minute $period';
+  }
+
+  // Helper method to get duration in minutes
+  String _getDurationInMinutes(SessionModel session) {
+    try {
+      final times = session.duration.split(' - ');
+      if (times.length >= 2) {
+        final start = DateTime.parse(times[0]);
+        final end = DateTime.parse(times[1]);
+        final difference = end.difference(start);
+        final minutes = difference.inMinutes;
+        return '$minutes minutes';
+      }
+      return 'TBD';
+    } catch (e) {
+      return 'TBD';
+    }
+  }
+
+  String _getWeekday(DateTime date) {
+    return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][date.weekday - 1];
+  }
+
+  String _getMonth(DateTime date) {
+    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.month - 1];
+  }
+
+  // Get tag color based on session type
+  Color _getTagColor(String sessionType) {
+    final type = sessionType.toLowerCase();
+    if (type.contains('keynote')) {
+      return AppColors.darkBlue;
+    } else if (type.contains('panel')) {
+      return Colors.yellow[700]!;
+    } else if (type.contains('workshop')) {
+      return Colors.green;
+    } else if (type.contains('breakout')) {
+      return Colors.orange;
+    } else if (type.contains('networking')) {
+      return Colors.purple;
+    } else {
+      return AppColors.primaryColor;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,134 +235,237 @@ class ConferenceScheduleScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      body: Obx(() {
+        final sessions = sessionsController.allSessions;
+        final isLoading = sessionsController.isLoading.value;
+        if (isLoading && sessions.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  flex: 6,
-                  child: CustomTextField(
-                    hintText: "Search",
-                    controller: searchController,
-                    suffixIcon: Icons.search,
-                  ),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Container(
-                    height: 50,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Icon(Icons.tune, color: AppColors.primaryColor),
-                  ),
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                AppText(
+                  text: "Loading conference schedule...",
+                  fontSize: 14,
+                  color: AppColors.darkgrey,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        text: "My Agenda",
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+          );
+        }
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Search Bar
+              Row(
+                children: [
+                  Expanded(
+                    flex: 6,
+                    child: CustomTextField(
+                      hintText: "Search sessions, speakers, topics...",
+                      controller: searchController,
+                      suffixIcon: Icons.search,
+                      onChanged: _onSearchChanged,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      height: 50,
+                      width: 40,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
-                      SizedBox(height: 4),
-                      AppText(
-                        text: "2 sessions bookmarked",
-                        fontSize: 14,
-                        color: Colors.white,
+                      child: Icon(Icons.tune, color: AppColors.primaryColor),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // My Agenda Card with dynamic count
+              GestureDetector(
+                onTap: _navigateToMyAgenda,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const AppText(
+                              text: "My Agenda",
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                            const SizedBox(height: 4),
+                            Obx(() {
+                              if (bookmarkViewModel.isLoading.value) {
+                                return Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 12,
+                                      height: 12,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    AppText(
+                                      text: "Loading your agenda...",
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                return AppText(
+                                  text: "${bookmarkViewModel.allSessions.length} sessions bookmarked",
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                );
+                              }
+                            }),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _navigateToMyAgenda,
+                        child: const Icon(Icons.arrow_forward, color: Colors.white),
                       ),
                     ],
                   ),
-                  Icon(Icons.arrow_forward, color: Colors.white),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            // 🗓 Day Heading
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
-                AppText(
-                  text: "Monday, Feb 10, 2025",
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-                AppText(
-                  text: "View All",
-                  fontSize: 14,
-                  color: AppColors.primaryColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+              // Dynamic Session List
+              if (_filteredSessions.isEmpty && _searchQuery.isNotEmpty)
+                _buildNoResults()
+              else if (_filteredSessions.isEmpty)
+                _buildEmptyState()
+              else
+                ..._buildSessionList(),
+            ],
+          ),
+        );
+      }),
+    );
+  }
 
-            // 📌 Session Card
-            _buildSessionCard(
-              title: "The Future of Regional Cooperation",
-              speaker: "Prof. Omar Khalil",
-              time: "10:00 AM – 11:30 AM",
-              duration: "90 minutes",
-              room: "Hall B",
-              tag: "Panel",
-              tagColor: Colors.yellow[700]!,
-            ),
-            const SizedBox(height: 20),
-
-            // 🗓 Next Day
-            const AppText(
-              text: "Tuesday, Feb 11, 2025",
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-            const SizedBox(height: 12),
-
-            _buildSessionCard(
-              title: "Digital Transformation in MENA",
-              speaker: "Dr. Sarah Hassan +2 more",
-              time: "2:00 PM – 3:30 PM",
-              duration: "90 minutes",
-              room: "Hall C",
-              tag: "Keynote",
-              tagColor: AppColors.darkBlue,
-            ),
-          ],
-        ),
+  Widget _buildNoResults() {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: AppColors.darkgrey,
+          ),
+          const SizedBox(height: 16),
+          AppText(
+            text: 'No sessions found',
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.blackColor,
+          ),
+          const SizedBox(height: 8),
+          AppText(
+            text: 'Try adjusting your search terms',
+            fontSize: 14,
+            color: AppColors.darkgrey,
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
 
-  // 🔹 Reusable Session Card
-  Widget _buildSessionCard({
-    required String title,
-    required String speaker,
-    required String time,
-    required String duration,
-    required String room,
-    required String tag,
-    required Color tagColor,
-  }) {
+  Widget _buildEmptyState() {
     return Container(
+      padding: const EdgeInsets.all(40),
+      child: Column(
+        children: [
+          Icon(
+            Icons.calendar_today,
+            size: 64,
+            color: AppColors.darkgrey,
+          ),
+          const SizedBox(height: 16),
+          AppText(
+            text: 'No Sessions Available',
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: AppColors.blackColor,
+          ),
+          const SizedBox(height: 8),
+          AppText(
+            text: 'Check back later for conference sessions',
+            fontSize: 14,
+            color: AppColors.darkgrey,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildSessionList() {
+    List<Widget> widgets = [];
+
+    _sessionsByDate.forEach((date, sessions) {
+      widgets.addAll([
+        // Date Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: AppText(
+                text: date,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            AppText(
+              text: "${sessions.length} sessions",
+              fontSize: 14,
+              color: AppColors.darkgrey,
+              fontWeight: FontWeight.w500,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Session Cards for this date
+        ...sessions.map((session) => _buildSessionCard(session)).toList(),
+        const SizedBox(height: 24),
+      ]);
+    });
+
+    return widgets;
+  }
+
+  // Session Card Widget
+  Widget _buildSessionCard(SessionModel session) {
+    final tagColor = _getTagColor(session.category ?? 'Session');
+    final isLive = session.isLive ?? false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.whiteColor,
@@ -169,27 +482,54 @@ class ConferenceScheduleScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title + Bookmark
+          // Title + Live Indicator
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
                 child: AppText(
-                  text: title,
+                  text: session.sessionTitle,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Icon(Icons.bookmark_border, color: AppColors.primaryColor),
+              if (isLive) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.live_tv, size: 12, color: Colors.white),
+                      SizedBox(width: 4),
+                      AppText(
+                        text: "LIVE",
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 6),
 
-          // Speaker
+          // Speaker(s)
           AppText(
-            text: speaker,
+            text: session.speakers.isNotEmpty
+                ? session.speakers.map((speaker) => speaker.fullName).join(', ')
+                : 'Speaker TBA',
             fontSize: 14,
             color: AppColors.darkgrey,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 12),
 
@@ -198,8 +538,16 @@ class ConferenceScheduleScreen extends StatelessWidget {
             children: [
               const Icon(Icons.calendar_today, size: 16, color: AppColors.darkgrey),
               const SizedBox(width: 6),
-              AppText(text: time, fontSize: 14, color: AppColors.darkgrey),
-              const Spacer(),
+              Expanded(
+                child: AppText(
+                  text: _getFormattedTime(session),
+                  fontSize: 14,
+                  color: AppColors.darkgrey,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
@@ -207,7 +555,7 @@ class ConferenceScheduleScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: AppText(
-                  text: tag,
+                  text: session.category ?? 'Session',
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                   color: tagColor,
@@ -218,35 +566,60 @@ class ConferenceScheduleScreen extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Duration + Room
-          Row(
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
             children: [
-              const AppText(
-                text: "Duration",
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AppText(
+                    text: "Duration:",
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  const SizedBox(width: 4),
+                  AppText(
+                    text: _getDurationInMinutes(session),
+                    fontSize: 14,
+                    color: AppColors.darkgrey,
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
-              AppText(text: duration, fontSize: 14, color: AppColors.darkgrey),
-              const SizedBox(width: 24),
-              const AppText(
-                text: "Room",
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AppText(
+                    text: "Room:",
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  const SizedBox(width: 4),
+                  AppText(
+                    text: session.location ?? 'TBD',
+                    fontSize: 14,
+                    color: AppColors.darkgrey,
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
-              AppText(text: room, fontSize: 14, color: AppColors.darkgrey),
             ],
           ),
           const SizedBox(height: 16),
 
-          // 🔘 Button
+          // View Details Button
           CustomButton(
             text: "View Details",
-            onPressed: () {},
+            onPressed: () => _navigateToSessionDetails(session.sessionId),
             height: 44,
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
   }
 }

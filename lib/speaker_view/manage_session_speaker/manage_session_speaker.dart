@@ -3,47 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
+import '../../data/response_models/speaker_response_models/speaker_sessions_detail_show_model.dart';
 import '../../images/images.dart';
+import '../../participants_view/seesion_details_view/session_detail_view.dart';
+import '../../view_model/login_view_model.dart';
+import '../../view_model/speaker_viewmodels/speaker_dashboard_show_viewmodel.dart';
+import '../../view_model/speaker_viewmodels/speaker_sessions_detail_show_viewmodel.dart'; // Add this import
+import '../speaker_dashboard_view/speaker_dashboard_show_view.dart';
 import '../sponser_exhibitor/sponser_exhibitor_speaker.dart';
-
-// App Colors
-
-// AppText Widget
-
-// Custom Button Widget
-
-// Session Model
-class Session {
-  final String title;
-  final String speaker;
-  final String speakerRole;
-  final String description;
-  final String time;
-  final String duration;
-  final String room;
-  final String type;
-  final bool isBookmarked;
-  final Color typeColor;
-  final String status; // "Completed", "Ongoing", "Upcoming"
-
-  Session({
-    required this.title,
-    required this.speaker,
-    required this.speakerRole,
-    required this.description,
-    required this.time,
-    required this.duration,
-    required this.room,
-    required this.type,
-    this.isBookmarked = false,
-    required this.typeColor,
-    required this.status,
-  });
-}
+import '../../utils/shared_preference.dart';
+import '../../participants_view/seesion_details_view/session_detail.dart'; // Add this import
 
 // Main Conference Dashboard Screen
 class SpeakerConferenceDashboardScreen extends StatefulWidget {
@@ -56,65 +30,107 @@ class SpeakerConferenceDashboardScreen extends StatefulWidget {
 
 class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDashboardScreen> {
   TextEditingController _searchController = TextEditingController();
+  final SpeakerDashboardShowViewModel _speakerViewModel = Get.put(SpeakerDashboardShowViewModel());
+  final SpeakerSessionsDetailShowViewModel _sessionsViewModel = Get.put(SpeakerSessionsDetailShowViewModel()); // Add this
+  final LoginViewModel _loginViewModel = Get.find<LoginViewModel>();
 
-  // Sample data
-  final List<Session> todaySessions = [
-    Session(
-      title: 'Digital Transformation in MENA',
-      speaker: 'Dr. Sarah Hassan',
-      speakerRole: 'Tech Innovation Expert',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '2:00 PM - 3:30 PM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Keynote',
-      typeColor: AppColors.lightBlue,
-      status: 'Completed',
-      isBookmarked: true,
-    ),
-    Session(
-      title: 'The Future of Regional Cooperation',
-      speaker: 'Prof. Omar Khalil',
-      speakerRole: 'Policy Analyst',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '10:00 AM - 11:30 AM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Panel',
-      typeColor: AppColors.warningColor,
-      status: 'In 30 minutes',
-      isBookmarked: true,
-    ),
-  ];
+  int? _speakerId;
+  String? _userName;
+  String? _userImage;
+  bool _isLoading = true;
 
-  final List<Session> tomorrowSessions = [
-    Session(
-      title: 'Digital Transformation in MENA',
-      speaker: 'Dr. Sarah Hassan',
-      speakerRole: 'Tech Innovation Expert',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '2:00 PM - 3:30 PM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Keynote',
-      typeColor: AppColors.lightBlue,
-      status: 'Upcoming',
-      isBookmarked: false,
-    ),
-    Session(
-      title: 'The Future of Regional Cooperation',
-      speaker: 'Prof. Omar Khalil',
-      speakerRole: 'Policy Analyst',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '10:00 AM - 11:30 AM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Panel',
-      typeColor: AppColors.warningColor,
-      status: 'Upcoming',
-      isBookmarked: false,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final isLoggedIn = await SharedPrefsHelper.isUserLoggedIn();
+    if (isLoggedIn) {
+      // Get user data from shared preferences first
+      _userName = await SharedPrefsHelper.getUserName();
+      _userImage = await SharedPrefsHelper.getUserImage();
+
+      // Update UI immediately with cached data
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+
+      // Try to get speaker ID from shared preferences first
+      _speakerId = await SharedPrefsHelper.getSpeakerId();
+
+      // If speaker ID is not found in shared preferences, fetch from API
+      if (_speakerId == null) {
+        final userId = await SharedPrefsHelper.getUserId();
+        if (userId != null) {
+          await _speakerViewModel.fetchSpeakerProfileByUserId(userId);
+          if (_speakerViewModel.speakerProfile != null) {
+            _speakerId = _speakerViewModel.speakerProfile!.id;
+            // Save speaker ID to shared preferences for future use
+            await SharedPrefsHelper.saveSpeakerId(_speakerId!);
+
+            // Also save user image if available from speaker profile
+            if (_speakerViewModel.speakerProfile!.user.file != null &&
+                _speakerViewModel.speakerProfile!.user.file!.isNotEmpty) {
+              await SharedPrefsHelper.setUserImage(_speakerViewModel.speakerProfile!.user.file!);
+              if (mounted) {
+                setState(() {
+                  _userImage = _speakerViewModel.speakerProfile!.user.file;
+                });
+              }
+            }
+
+            // Fetch speaker sessions after getting speaker ID
+            if (_speakerId != null) {
+              await _sessionsViewModel.fetchSpeakerSessions(_speakerId!);
+            }
+          }
+        }
+      } else {
+        // If speaker ID exists, fetch the profile
+        await _speakerViewModel.fetchSpeakerProfile(_speakerId!);
+
+        // Update user image from speaker profile if available
+        if (_speakerViewModel.speakerProfile != null &&
+            _speakerViewModel.speakerProfile!.user.file != null &&
+            _speakerViewModel.speakerProfile!.user.file!.isNotEmpty) {
+          await SharedPrefsHelper.setUserImage(_speakerViewModel.speakerProfile!.user.file!);
+          if (mounted) {
+            setState(() {
+              _userImage = _speakerViewModel.speakerProfile!.user.file;
+            });
+          }
+        }
+
+        // Fetch speaker sessions
+        await _sessionsViewModel.fetchSpeakerSessions(_speakerId!);
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      Get.snackbar(
+        'Authentication Error',
+        'Please login again',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  // Method to navigate to session details
+  void _navigateToSessionDetails(int sessionId) {
+    print('=== Navigating to session details for ID: $sessionId ===');
+    Get.to(() => SessionDetailsScreen(
+      sessionId: sessionId,
+      key: ValueKey('session_$sessionId'),
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -124,10 +140,18 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildSearchBar(),
-            _buildSponsorsCard(),
-            _buildStatsCards(),
-            _buildSessionsList(),
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: _buildSearchBar(),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: _buildStatsCards(),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: _buildSessionsList(),
+            ),
           ],
         ),
       ),
@@ -144,15 +168,13 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
             width: 100,
             height: 40,
             decoration: BoxDecoration(
-                image: DecorationImage(image: AssetImage(Images.alsharqLogo)),
+              image: DecorationImage(image: AssetImage(Images.alsharqLogo)),
               borderRadius: BorderRadius.circular(8),
             ),
-
           ),
         ],
       ),
       actions: [
-
         CircleAvatar(
           backgroundColor: AppColors.lightred,
           radius: 22,
@@ -163,23 +185,31 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
             icon: Icon(Icons.chat, color: AppColors.blackColor),
           ),
         ),
-        SizedBox(width: 10,),
+        SizedBox(width: 10),
         CircleAvatar(
           backgroundColor: AppColors.lightred,
-
           radius: 22,
-
           child: IconButton(
             onPressed: () {},
             icon: Icon(Icons.notifications_none, color: AppColors.blackColor),
           ),
         ),
-        SizedBox(width: 10,),
-
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: AppColors.mediumGreyColor,
-          child: Image(image: AssetImage(Images.drjohnthan)),
+        SizedBox(width: 10),
+        // User Avatar with speaker image
+        GestureDetector(
+          onTap: () {
+            Get.to(SpeakerDashboardScreen());
+          },
+          child: CircleAvatar(
+            radius: 22,
+            backgroundColor: AppColors.mediumGreyColor,
+            backgroundImage: _userImage != null && _userImage!.isNotEmpty
+                ? NetworkImage(_userImage!)
+                : null,
+            child: _userImage == null || _userImage!.isEmpty
+                ? Image(image: AssetImage(Images.drjohnthan))
+                : null,
+          ),
         ),
         SizedBox(width: 16),
       ],
@@ -209,54 +239,21 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
     );
   }
 
-  Widget _buildSponsorsCard() {
-    return Container(
-      margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Color(0xffFFF9E6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.star, color: AppColors.whiteColor),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: AppText(
-              text: 'Sponsors',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.blackColor,
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, color: AppColors.primaryColor, size: 16),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStatsCards() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(child: _buildStatCard('Total Hosted', '24', Icons.event)),
-          SizedBox(width: 12),
-          Expanded(child: _buildStatCard('Ongoing', '5', Icons.play_circle_filled, color: AppColors.successColor)),
-          SizedBox(width: 12),
-          Expanded(child: _buildStatCard('Scheduled', '12', Icons.schedule, color: AppColors.warningColor)),
-        ],
-      ),
-    );
+    return Obx(() {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Expanded(child: _buildStatCard('Total Hosted', _sessionsViewModel.totalSessions.toString(), Icons.event)),
+            SizedBox(width: 12),
+            Expanded(child: _buildStatCard('Ongoing Sessions', _sessionsViewModel.ongoingSessions.toString(), Icons.play_circle_filled, color: AppColors.successColor)),
+            SizedBox(width: 12),
+            Expanded(child: _buildStatCard('Scheduled Sessions', _sessionsViewModel.scheduledSessions.toString(), Icons.schedule, color: AppColors.warningColor)),
+          ],
+        ),
+      );
+    });
   }
 
   Widget _buildStatCard(String title, String count, IconData icon, {Color? color}) {
@@ -308,17 +305,85 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
   }
 
   Widget _buildSessionsList() {
-    return Column(
-      children: [
-        // Today's Sessions
-        _buildDateHeader('Monday, Feb 10, 2025'),
-        ...todaySessions.map((session) => _buildSessionCard(session)),
+    return Obx(() {
+      if (_sessionsViewModel.isLoading) {
+        return Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primaryColor,
+          ),
+        );
+      }
 
-        // Tomorrow's Sessions
-        _buildDateHeader('Tuesday, Feb 11, 2025'),
-        ...tomorrowSessions.map((session) => _buildSessionCard(session)),
-      ],
-    );
+      if (_sessionsViewModel.error.isNotEmpty) {
+        return Center(
+          child: Column(
+            children: [
+              AppText(
+                text: _sessionsViewModel.error,
+                color: Colors.red,
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  if (_speakerId != null) {
+                    _sessionsViewModel.fetchSpeakerSessions(_speakerId!);
+                  }
+                },
+                child: AppText(text: 'Retry'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final sessions = _sessionsViewModel.sessions;
+
+      if (sessions.isEmpty) {
+        return Center(
+          child: AppText(
+            text: 'Fetching Sessions...',
+            color: Colors.grey,
+          ),
+        );
+      }
+
+      // Group sessions by date
+      final Map<String, List<SpeakerSessionModel>> groupedSessions = {};
+
+      for (final session in sessions) {
+        try {
+          final date = DateTime.parse(session.startTime);
+          final dateKey = '${_getWeekday(date)}, ${_getMonth(date)} ${date.day}, ${date.year}';
+
+          if (!groupedSessions.containsKey(dateKey)) {
+            groupedSessions[dateKey] = [];
+          }
+          groupedSessions[dateKey]!.add(session);
+        } catch (e) {
+          // Skip sessions with invalid dates
+        }
+      }
+
+      return Column(
+        children: groupedSessions.entries.map((entry) {
+          return Column(
+            children: [
+              _buildDateHeader(entry.key),
+              ...entry.value.map((session) => _buildSessionCard(session)),
+            ],
+          );
+        }).toList(),
+      );
+    });
+  }
+
+  String _getWeekday(DateTime date) {
+    return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][date.weekday - 1];
+  }
+
+  String _getMonth(DateTime date) {
+    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][date.month - 1];
   }
 
   Widget _buildDateHeader(String date) {
@@ -344,7 +409,7 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
     );
   }
 
-  Widget _buildSessionCard(Session session) {
+  Widget _buildSessionCard(SpeakerSessionModel session) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: EdgeInsets.all(16),
@@ -362,7 +427,7 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with title and bookmark
+          // Header with title and status
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -374,53 +439,70 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
                   color: AppColors.blackColor,
                 ),
               ),
-              Icon(
-                session.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                color: session.isBookmarked ? AppColors.primaryColor : AppColors.darkgrey,
-                size: 20,
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: session.statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: AppText(
+                  text: session.status,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: session.statusColor,
+                ),
               ),
             ],
           ),
           SizedBox(height: 8),
 
           // Speaker info
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: AppColors.primaryColor,
-                child: AppText(
-                  text: session.speaker.split(' ').map((e) => e[0]).join(''),
-                  fontSize: 10,
-                  color: AppColors.whiteColor,
+          if (session.speakers.isNotEmpty) ...[
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: AppColors.primaryColor,
+                  backgroundImage: session.speakers.first.file.isNotEmpty
+                      ? NetworkImage(session.speakers.first.file)
+                      : null,
+                  child: session.speakers.first.file.isEmpty
+                      ? AppText(
+                    text: session.speakers.first.name.split(' ').map((e) => e[0]).join(''),
+                    fontSize: 10,
+                    color: AppColors.whiteColor,
+                  )
+                      : null,
                 ),
-              ),
-              SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text: session.speaker,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.blackColor,
-                  ),
-                  AppText(
-                    text: session.status,
-                    fontSize: 12,
-                    color: session.status == 'Completed' ? AppColors.successColor : AppColors.warningColor,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
+                SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      text: session.speakers.first.name,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.blackColor,
+                    ),
+                    AppText(
+                      text: session.status,
+                      fontSize: 12,
+                      color: session.statusColor,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+          ],
 
           // Description
           AppText(
             text: session.description,
             fontSize: 13,
             color: AppColors.darkgrey,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: 12),
 
@@ -430,7 +512,7 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
               Icon(Icons.access_time, size: 16, color: AppColors.darkgrey),
               SizedBox(width: 4),
               AppText(
-                text: session.time,
+                text: session.formattedTime,
                 fontSize: 12,
                 color: AppColors.darkgrey,
               ),
@@ -438,14 +520,14 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: session.typeColor.withOpacity(0.1),
+                  color: AppColors.lightBlue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: AppText(
-                  text: session.type,
+                  text: session.category,
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
-                  color: session.typeColor == AppColors.lightBlue ? AppColors.darkBlue : Colors.orange,
+                  color: AppColors.darkBlue,
                 ),
               ),
             ],
@@ -480,7 +562,7 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
               ),
               Spacer(),
               AppText(
-                text: session.room,
+                text: session.displayLocation,
                 fontSize: 12,
                 color: AppColors.darkgrey,
               ),
@@ -491,9 +573,9 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
           // Action button
           CustomButton(
             text: session.status == 'Completed' ? 'View Details' :
-            session.status.contains('minutes') ? 'Join Session' : 'View Details',
+            session.status == 'Ongoing' ? 'Join Session' : 'View Details',
             onPressed: () {
-              Get.to(SpeakerSponsorsExhibitorsScreen());
+              _navigateToSessionDetails(session.id);
             },
             backgroundColor: AppColors.primaryColor,
             height: 40,
@@ -503,11 +585,63 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
     );
   }
 
-
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  // Add this method to handle role switching
+  void _showSwitchRoleDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: AppText(
+            text: 'Switch Role',
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+          content: AppText(
+            text: 'Do you want to switch to Participant view? You can switch back anytime.',
+            fontSize: 14,
+            color: AppColors.darkgrey,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: AppText(
+                text: 'Cancel',
+                fontSize: 14,
+                color: AppColors.darkgrey,
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _loginViewModel.switchRole('participant');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: AppText(
+                text: 'Switch',
+                fontSize: 14,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

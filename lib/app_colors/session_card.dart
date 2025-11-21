@@ -55,29 +55,12 @@ class SessionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with title and bookmark
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: AppText(
-                  text: title,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.blackColor,
-                ),
-              ),
-              GestureDetector(
-                onTap: onBookmarkTap,
-                child: Icon(
-                  isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  color: isBookmarked
-                      ? AppColors.primaryColor
-                      : AppColors.darkgrey,
-                  size: 24,
-                ),
-              ),
-            ],
+          // Header with title only
+          AppText(
+            text: title,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: AppColors.blackColor,
           ),
 
           const SizedBox(height: 8),

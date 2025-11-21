@@ -486,7 +486,7 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
             text: session.status == 'Completed' ? 'View Details' :
             session.status.contains('minutes') ? 'Join Session' : 'View Details',
             onPressed: () {
-              Get.to(SponsorDetailScreen());
+              //Get.to(SponsorDetailScreen(sponsorId: sponsor.id,));
             },
             backgroundColor: AppColors.primaryColor,
             height: 40,

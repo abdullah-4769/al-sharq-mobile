@@ -7,8 +7,12 @@ class AppText extends StatelessWidget {
   final FontWeight fontWeight;
   final Color color;
   final TextAlign textAlign;
-  final TextDecoration decoration; // ✅ NEW
-  final Color? decorationColor; // ✅ NEW
+  final TextDecoration decoration;
+  final Color? decorationColor;
+
+  // ✅ New optional fields
+  final int? maxLines;
+  final TextOverflow? overflow;
 
   const AppText({
     super.key,
@@ -17,8 +21,10 @@ class AppText extends StatelessWidget {
     this.fontWeight = FontWeight.normal,
     this.color = Colors.black,
     this.textAlign = TextAlign.start,
-    this.decoration = TextDecoration.none, // ✅ Default no decoration
-    this.decorationColor, // ✅ Optional
+    this.decoration = TextDecoration.none,
+    this.decorationColor,
+    this.maxLines,
+    this.overflow,
   }) : assert(
   fontSize >= 10 && fontSize <= 28,
   "Font size must be between 10 and 28",
@@ -29,12 +35,14 @@ class AppText extends StatelessWidget {
     return Text(
       text,
       textAlign: textAlign,
+      maxLines: maxLines, // ✅ optional
+      overflow: overflow, // ✅ optional
       style: GoogleFonts.ibmPlexSans(
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
         decoration: decoration,
-        decorationColor: decorationColor ?? color, // ✅ fallback to text color
+        decorationColor: decorationColor ?? color,
       ),
     );
   }

@@ -9,9 +9,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart'; // Correct import for SVG
+import 'package:al_sharq_conference/utils/shared_preference.dart';
 
-class CustomAppDrawer extends StatelessWidget {
+class CustomAppDrawer extends StatefulWidget {
   const CustomAppDrawer({super.key});
+
+  @override
+  State<CustomAppDrawer> createState() => _CustomAppDrawerState();
+}
+
+class _CustomAppDrawerState extends State<CustomAppDrawer> {
+
+  String? userEmail;
+  String? userName;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    userEmail = await SharedPrefsHelper.getUserEmail();
+    userName = await SharedPrefsHelper.getUserName();
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,9 +50,8 @@ class CustomAppDrawer extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                 AppColors.primaryColor,
-                 AppColors.primaryColor,
-
+                  AppColors.primaryColor,
+                  AppColors.primaryColor,
                 ],
               ),
             ),
@@ -42,19 +63,16 @@ class CustomAppDrawer extends StatelessWidget {
                   children: [
                     const SizedBox(height: 12),
                     AppText(
-                      text: 'Adnan Qasim',
-
+                      text: userName ?? 'Guest User',
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                     const SizedBox(height: 4),
                     AppText(
-                      text: 'adnan@gmail.com',
-
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      text: userEmail ?? 'guest@example.com',
+                      fontSize: 16,
+                      color: Colors.white70,
                     ),
                   ],
                 ),
@@ -71,7 +89,7 @@ class CustomAppDrawer extends StatelessWidget {
                   icon: Icons.home_outlined,
                   title: "Home",
                   color: Colors.blue,
-                  onTap: () => Get.to(HomeView()),
+                  onTap: () => Get.offAll(HomeView()),
                 ),
                 _buildEnhancedListTile(
                   icon: Icons.schedule_outlined,
@@ -83,7 +101,7 @@ class CustomAppDrawer extends StatelessWidget {
                   icon: Icons.event_note_outlined,
                   title: "My Agenda",
                   color: Colors.green,
-                  onTap: () =>Get.to(MyAgendaScreen()),
+                  onTap: () => Get.to(MyAgendaScreen()),
                 ),
                 _buildEnhancedListTile(
                   icon: Icons.qr_code_scanner_outlined,
@@ -109,18 +127,50 @@ class CustomAppDrawer extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                _buildEnhancedListTile(
-                  icon: Icons.settings_outlined,
-                  title: "Settings",
-                  color: Colors.grey,
-                  onTap: () => Navigator.pop(context),
-                ),
+                //
+                // _buildEnhancedListTile(
+                //   icon: Icons.settings_outlined,
+                //   title: "Settings",
+                //   color: Colors.grey,
+                //   onTap: () => Navigator.pop(context),
+                // ),
                 _buildEnhancedListTile(
                   icon: Icons.help_outline,
                   title: "Help & Support",
                   color: Colors.teal,
                   onTap: () => Navigator.pop(context),
+                ),
+
+                // Logout Button
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(10)),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(Icons.logout, color: Colors.red, size: 20),
+                    ),
+                    title: AppText(
+                      text: 'Logout',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                    trailing: Icon(
+                      Icons.arrow_forward,
+                      size: 16,
+                      color: AppColors.primaryColor,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    onTap: _showLogoutDialog,
+                    hoverColor: Colors.red.withOpacity(0.05),
+                    splashColor: Colors.red.withOpacity(0.1),
+                  ),
                 ),
               ],
             ),
@@ -142,14 +192,8 @@ class CustomAppDrawer extends StatelessWidget {
                 Positioned.fill(
                   child: ClipRRect(
                     child: Image(image: AssetImage(Images.alsharqLogo)),
-                    // child: SvgPicture.asset(
-                    //   "assets/al sharq guidelines-3 copy.svg",
-                    //   fit: BoxFit.cover,
-                    // ),
                   ),
                 ),
-
-                // Overlay content
               ],
             ),
           ),
@@ -179,7 +223,6 @@ class CustomAppDrawer extends StatelessWidget {
         ),
         title: AppText(
           text: title,
-
           fontSize: 14,
           fontWeight: FontWeight.w500,
           color: Colors.black87,
@@ -194,6 +237,61 @@ class CustomAppDrawer extends StatelessWidget {
         hoverColor: color.withOpacity(0.05),
         splashColor: color.withOpacity(0.1),
       ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const AppText(
+            text: 'Logout',
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+          content: const AppText(
+            text: 'Are you sure you want to logout?',
+            fontSize: 14,
+            color: AppColors.darkgrey,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const AppText(
+                text: 'Cancel',
+                fontSize: 14,
+                color: AppColors.darkgrey,
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await SharedPrefsHelper.clearAll();
+                // Add your navigation logic here after logout
+                // For example: Get.offAll(LoginScreen());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const AppText(
+                text: 'Logout',
+                fontSize: 14,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

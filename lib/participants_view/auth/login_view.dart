@@ -1,3 +1,4 @@
+// lib/participants_view/auth/login_view.dart
 import 'package:al_sharq_conference/participants_view/auth/forget_password_view.dart';
 import 'package:al_sharq_conference/participants_view/auth/signup_view.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +10,11 @@ import '../../custom_widgets/conference_logo.dart';
 import '../../custom_widgets/custom_button.dart';
 import '../../custom_widgets/custom_text_field.dart';
 import '../../custom_widgets/form_label.dart';
+import '../../data/request_models/login_request_model.dart';
 import '../../images/images.dart';
+import '../../utils/app_validation.dart';
+import '../../view_model/login_view_model.dart';
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,11 +24,26 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final LoginViewModel _viewModel = Get.put(LoginViewModel());
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRememberMe();
+  }
+
+  void _checkRememberMe() async {
+    final remembered = await _viewModel.checkIfUserLoggedIn();
+    if (remembered) {
+      final userData = await _viewModel.getStoredUserData();
+      _emailController.text = userData['email'] ?? '';
+      _viewModel.rememberMe.value = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -31,19 +51,25 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logging in...')),
-      );
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    final model = LoginRequestModel(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    await _viewModel.login(model);
+
   }
 
   @override
   Widget build(BuildContext context) {
     double height = MediaQuery.of(context).size.height;
     double width = MediaQuery.of(context).size.width;
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -68,23 +94,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: AppColors.primaryColor,
                     ),
                     const SizedBox(height: 48),
+
+                    // Email Field
                     const FormLabel(text: "Email Address", isRequired: true),
                     CustomTextField(
                       suffixIcon: Icons.mail_outline,
                       hintText: 'Enter Your Email Address',
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
+                      validator: AppValidators.validateEmail,
+                      enabled: !_viewModel.isLoading.value,
                     ),
                     SizedBox(height: height * 0.016),
+
+                    // Password Field
                     const FormLabel(text: "Password", isRequired: true),
                     CustomTextField(
                       hintText: 'Enter Your Password',
@@ -92,42 +115,33 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: _obscurePassword,
                       suffixIcon: _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       suffixIconColor: Colors.grey[400],
-                      onSuffixIconTap: () {
+                      onSuffixIconTap: _viewModel.isLoading.value ? null : () {
                         setState(() {
                           _obscurePassword = !_obscurePassword;
                         });
                       },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      validator: AppValidators.validateSimplePassword,
+                      enabled: !_viewModel.isLoading.value,
                     ),
                     SizedBox(height: height * 0.016),
-                    Row(
+
+                    // Remember Me & Forgot Password
+                    Obx(() => Row(
                       children: [
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Checkbox(
-                              value: _rememberMe,
-                              onChanged: (value) {
-                                setState(() {
-                                  _rememberMe = value ?? false;
-                                });
+                              value: _viewModel.rememberMe.value,
+                              onChanged: _viewModel.isLoading.value ? null : (value) {
+                                _viewModel.rememberMe.value = value ?? false;
                               },
                               activeColor: AppColors.primaryColor,
                             ),
                             GestureDetector(
                               behavior: HitTestBehavior.translucent,
-                              onTap: () {
-                                setState(() {
-                                  _rememberMe = !_rememberMe;
-                                });
+                              onTap: _viewModel.isLoading.value ? null : () {
+                                _viewModel.rememberMe.value = !_viewModel.rememberMe.value;
                               },
                               child: AppText(
                                 text: 'Remember me',
@@ -140,13 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const Spacer(),
                         TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const ForgotPasswordScreen(),
-                              ),
-                            );
+                          onPressed: _viewModel.isLoading.value ? null : () {
+                            Get.to(() => const ForgotPasswordScreen());
                           },
                           child: AppText(
                             text: 'Forget Password',
@@ -156,10 +165,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
-                    ),
+                    )),
                     SizedBox(height: height * 0.016),
-                    CustomButton(text: 'Sign In', onPressed: _login),
+
+                    // Login Button
+                    Obx(() => CustomButton(
+                      text: _viewModel.isLoading.value ? 'Signing In...' : 'Sign In',
+                      onPressed: _viewModel.isLoading.value ? null : _login,
+                      isLoading: _viewModel.isLoading.value,
+                    )),
                     SizedBox(height: height * 0.036),
+
+                    // Divider
                     Row(
                       children: [
                         Expanded(child: _buildDivider()),
@@ -176,32 +193,36 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     SizedBox(height: height * 0.036),
-                    _buildSocialButton(
+
+                    // Social Buttons
+                    Obx(() => _buildSocialButton(
                       imagePath: Images.googleimage,
                       label: 'Continue with Google',
-                      onPressed: () {},
-                    ),
+                      onPressed: _viewModel.isLoading.value ? null : () {},
+                    )),
                     SizedBox(height: height * 0.016),
-                    _buildSocialButton(
+                    Obx(() => _buildSocialButton(
                       imagePath: Images.facebookimage,
                       label: 'Continue with Facebook',
-                      onPressed: () {},
-                    ),
+                      onPressed: _viewModel.isLoading.value ? null : () {},
+                    )),
                     SizedBox(height: height * 0.016),
-                    _buildSocialButton(
+                    Obx(() => _buildSocialButton(
                       imagePath: Images.appleimage,
                       label: 'Continue with Apple',
-                      onPressed: () {},
-                    ),
+                      onPressed: _viewModel.isLoading.value ? null : () {},
+                    )),
                     SizedBox(height: height * 0.016),
-                    Row(
+
+                    // Sign Up Link
+                    Obx(() => Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         AppText(text: "Don't Have an account?", fontSize: 16),
                         InkWell(
-                          onTap: () {
-                            Get.to(const SignupScreen());
+                          onTap: _viewModel.isLoading.value ? null : () {
+                            Get.to(() => const SignupScreen());
                           },
                           child: AppText(
                             text: "Sign Up",
@@ -212,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                       ],
-                    ),
+                    )),
                     SizedBox(height: height * 0.016),
                   ],
                 ),
@@ -232,7 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildSocialButton({
     required String imagePath,
     required String label,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return SizedBox(
       width: double.infinity,
@@ -261,3 +282,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

@@ -1,18 +1,19 @@
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:flutter/material.dart';
-
 import 'app_text.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
-  final Color? backgroundColor; // optional
-  final Color? textColor; // optional
+  final Color? backgroundColor;
+  final Color? textColor;
   final double? height;
   final bool isLoading;
-  final String? imagePath; // optional image
-  final Color? borderColor; // optional border
-  final double? borderWidth; // optional border width
+  final String? imagePath;
+  final Color? borderColor;
+  final double? borderWidth;
+  final Widget? icon; // ✅ new optional icon
+  final double? width; // ✅ NEW optional width field
 
   const CustomButton({
     super.key,
@@ -25,18 +26,20 @@ class CustomButton extends StatelessWidget {
     this.imagePath,
     this.borderColor,
     this.borderWidth,
+    this.icon,
+    this.width, // ✅ NEW added here
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: height ?? 48,
-      width: double.infinity,
+      width: width ?? double.infinity, // ✅ NEW width property
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.primaryColor, // default primaryColor
-          foregroundColor: textColor ?? Colors.white, // default white
+          backgroundColor: backgroundColor ?? AppColors.primaryColor,
+          foregroundColor: textColor ?? Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: borderColor != null
@@ -59,7 +62,11 @@ class CustomButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (imagePath != null) ...[
+            // ✅ optional icon takes priority
+            if (icon != null) ...[
+              icon!,
+              const SizedBox(width: 8),
+            ] else if (imagePath != null) ...[
               Image.asset(
                 imagePath!,
                 height: 20,
@@ -71,7 +78,7 @@ class CustomButton extends StatelessWidget {
               text: text,
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: textColor ?? Colors.white, // default white
+              color: textColor ?? Colors.white,
             ),
           ],
         ),

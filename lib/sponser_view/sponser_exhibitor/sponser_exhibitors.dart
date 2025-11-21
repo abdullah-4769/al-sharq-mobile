@@ -262,7 +262,7 @@ class _SpeakerSponsorsExhibitorsScreenState extends State<SpeakerSponsorsExhibit
           CustomButton(
             text: 'Learn More',
             onPressed: () {
-              Get.to(SponsorDetailScreen());
+             // Get.to(SponsorDetailScreen(sponsorId: sponsor.id,));
             },
             backgroundColor: AppColors.primaryColor,
             height: 40,
@@ -349,7 +349,7 @@ class _SpeakerSponsorsExhibitorsScreenState extends State<SpeakerSponsorsExhibit
           CustomButton(
             text: 'Learn More',
             onPressed: () {
-              Get.to(SponsorDetailScreen());
+             // Get.to(SponsorDetailScreen(sponsorId: sponsor.id,));
 
             },
             backgroundColor: AppColors.primaryColor,
