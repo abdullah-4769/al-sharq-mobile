@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:al_sharq_conference/custom_widgets/app_text.dart';
 import 'package:al_sharq_conference/custom_widgets/custom_text_field.dart';
-import 'package:al_sharq_conference/custom_widgets/custom_button.dart';
+import 'package:al_sharq_conference/data/response_models/organizer_response_models/organize_see_participants_short_info_model.dart';
+import 'package:al_sharq_conference/view_model/organizer_viewmodels/organize_see_participants_short_info_viewmodel.dart';
+import 'package:al_sharq_conference/view_model/organizer_viewmodels/organizer_block_user_viewmodel.dart';
+import 'package:al_sharq_conference/view_model/organizer_viewmodels/organizer_delete_user_viewmodel.dart';
+
+import '../../data/response_models/organizer_response_models/organizer_dashboard_small_detail_show_model.dart';
+import '../organizer_dashboard/participant_detail_screen.dart';
+import '../organizer_dashboard/view_all_participants.dart';
 
 class ManageParticipantsScreen extends StatefulWidget {
   const ManageParticipantsScreen({super.key});
@@ -13,37 +22,26 @@ class ManageParticipantsScreen extends StatefulWidget {
 
 class _ManageParticipantsScreenState extends State<ManageParticipantsScreen> {
   final TextEditingController searchController = TextEditingController();
+  final OrganizeSeeParticipantsShortInfoViewModel _participantsViewModel =
+  Get.put(OrganizeSeeParticipantsShortInfoViewModel());
 
-  final List<ParticipantData> participants = [
-    ParticipantData(
-      name: 'Dr. Johnathan',
-      title: 'Director of Regional Affairs',
-      email: 'johnathan@institute.com',
-      status: 'Approved',
-      statusColor: Colors.green,
-    ),
-    ParticipantData(
-      name: 'Sarah Mitchell',
-      title: 'Innovation Labs',
-      email: 'sarah@global.com',
-      status: 'Approved',
-      statusColor: Colors.green,
-    ),
-    ParticipantData(
-      name: 'Michael Chen',
-      title: 'Data Analytics Team',
-      email: 'michael@labs.com',
-      status: 'Approved',
-      statusColor: Colors.green,
-    ),
-    ParticipantData(
-      name: 'Ava Robinson',
-      title: 'User Experience Research',
-      email: 'ava.robinson@global.com',
-      status: 'Pending',
-      statusColor: Colors.orange,
-    ),
-  ];
+  // Create separate instances for each user to avoid shared loading state
+  final Map<int, OrganizerBlockUserViewModel> _blockViewModels = {};
+  final Map<int, OrganizerDeleteUserViewModel> _deleteViewModels = {};
+
+  OrganizerBlockUserViewModel _getBlockViewModel(int userId) {
+    if (!_blockViewModels.containsKey(userId)) {
+      _blockViewModels[userId] = OrganizerBlockUserViewModel();
+    }
+    return _blockViewModels[userId]!;
+  }
+
+  OrganizerDeleteUserViewModel _getDeleteViewModel(int userId) {
+    if (!_deleteViewModels.containsKey(userId)) {
+      _deleteViewModels[userId] = OrganizerDeleteUserViewModel();
+    }
+    return _deleteViewModels[userId]!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,196 +61,201 @@ class _ManageParticipantsScreenState extends State<ManageParticipantsScreen> {
           color: Colors.black,
         ),
       ),
-      body: Column(
-        children: [
-          // Search and Filter
-          Container(
-            color: AppColors.whiteColor,
-            padding: const EdgeInsets.all(16),
-            child: Row(
+      body: Obx(() {
+        if (_participantsViewModel.isLoading.value && _participantsViewModel.participantsData.value == null) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  child: CustomTextField(
-                    hintText: 'Search',
-                    controller: searchController,
-                    suffixIcon: Icons.search,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Icon(Icons.tune, color: AppColors.primaryColor),
-              ],
-            ),
-          ),
-
-          // Stats Bar
-          Container(
-            color: AppColors.whiteColor,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                _buildStatChip('Registered', '1,785', Colors.blue, false),
-                const SizedBox(width: 12),
-                _buildStatChip('Checked In', '5', Colors.green, false),
-                const SizedBox(width: 12),
-                _buildStatChip('Pending', '45', Colors.red, false),
-              ],
-            ),
-          ),
-
-          // Export Report Section
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.whiteColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.file_download, color: AppColors.primaryColor),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const AppText(
-                        text: 'Export Report',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
-                      ),
-                      const AppText(
-                        text: 'Generate Report list',
-                        fontSize: 12,
-                        color: AppColors.darkgrey,
-                      ),
-                    ],
-                  ),
-                ),
-                const AppText(
-                  text: 'Download CSV',
-                  fontSize: 12,
+                CircularProgressIndicator(
                   color: AppColors.primaryColor,
                 ),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: AppColors.primaryColor),
-              ],
-            ),
-          ),
-
-          // Networking Requests Section
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        text: 'Networking Requests',
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                      AppText(
-                        text: 'Manage All Connection Requests',
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_forward, color: Colors.white),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Participants Count
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const AppText(
-                  text: '275 Speakers Showing',
+                SizedBox(height: 16),
+                AppText(
+                  text: 'Loading participants...',
                   fontSize: 14,
                   color: AppColors.darkgrey,
                 ),
-                GestureDetector(
-                  onTap: () {},
-                  child: const AppText(
-                    text: 'View All',
-                    fontSize: 14,
-                    color: AppColors.primaryColor,
-                  ),
+              ],
+            ),
+          );
+        }
+
+        if (_participantsViewModel.error.isNotEmpty && _participantsViewModel.participantsData.value == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AppText(
+                  text: _participantsViewModel.error.value,
+                  color: Colors.red,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _participantsViewModel.fetchParticipantsData,
+                  child: const AppText(text: 'Retry'),
                 ),
               ],
             ),
-          ),
+          );
+        }
 
-          const SizedBox(height: 16),
-
-          // Participants List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: participants.length,
-              itemBuilder: (context, index) {
-                final participant = participants[index];
-                return _buildParticipantCard(participant);
-              },
+        return Column(
+          children: [
+            // Search and Filter
+            Container(
+              color: AppColors.whiteColor,
+              padding: EdgeInsets.all(16.w),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CustomTextField(
+                      hintText: 'Search',
+                      controller: searchController,
+                      suffixIcon: Icons.search,
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Icon(Icons.tune, color: AppColors.primaryColor, size: 24.w),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+
+            // Stats Bar - Using API data
+            Container(
+              color: AppColors.whiteColor,
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Expanded(
+                    child: _buildStatChip('Total', _participantsViewModel.formattedTotalParticipants, Colors.blue, false),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: _buildStatChip('Bookmarks', _participantsViewModel.formattedTotalBookmarks, Colors.green, false),
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: _buildStatChip('Sessions', _participantsViewModel.formattedTotalSessionRegistrations, Colors.red, false),
+                  ),
+                ],
+              ),
+            ),
+            //
+            // // Networking Requests Section
+            // Container(
+            //   margin: EdgeInsets.symmetric(horizontal: 16.w),
+            //   padding: EdgeInsets.all(16.w),
+            //   decoration: BoxDecoration(
+            //     color: AppColors.primaryColor,
+            //     borderRadius: BorderRadius.circular(12.r),
+            //   ),
+            //   child: Row(
+            //     children: [
+            //       Expanded(
+            //         child: Column(
+            //           crossAxisAlignment: CrossAxisAlignment.start,
+            //           children: [
+            //             AppText(
+            //               text: 'Networking Requests',
+            //               fontSize: 16.sp,
+            //               fontWeight: FontWeight.w600,
+            //               color: Colors.white,
+            //             ),
+            //             AppText(
+            //               text: 'Manage All Connection Requests',
+            //               fontSize: 12.sp,
+            //               color: Colors.white,
+            //             ),
+            //           ],
+            //         ),
+            //       ),
+            //       Icon(Icons.arrow_forward, color: Colors.white, size: 20.w),
+            //     ],
+            //   ),
+            // ),
+
+            SizedBox(height: 16.h),
+
+            // Participants Count
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  AppText(
+                    text: '${_participantsViewModel.users.length} Participants Showing',
+                    fontSize: 14.sp,
+                    color: AppColors.darkgrey,
+                  ),
+                  // In ManageParticipantsScreen, update the View All button
+                  GestureDetector(
+                    onTap: () {
+                      Get.to(() => ViewAllParticipantsScreen());
+                      print("Button tap to view all");
+                    },
+                    child: AppText(
+                      text: 'View All',
+                      fontSize: 14.sp,
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 16.h),
+
+            // Participants List
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                itemCount: _participantsViewModel.users.length,
+                itemBuilder: (context, index) {
+                  final user = _participantsViewModel.users[index];
+                  return _buildParticipantCard(user);
+                },
+              ),
+            ),
+          ],
+        );
+      }),
     );
   }
 
   Widget _buildStatChip(String label, String count, Color color, bool isSelected) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
           color: isSelected ? color : AppColors.mediumGreyColor,
         ),
       ),
-      child: Row(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           AppText(
             text: label,
-            fontSize: 12,
+            fontSize: 10.sp,
             fontWeight: FontWeight.w500,
             color: isSelected ? color : AppColors.darkgrey,
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(width: 4),
+          SizedBox(height: 2.h),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6.r),
             ),
             child: AppText(
               text: count,
-              fontSize: 10,
+              fontSize: 10.sp,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -262,13 +265,16 @@ class _ManageParticipantsScreenState extends State<ManageParticipantsScreen> {
     );
   }
 
-  Widget _buildParticipantCard(ParticipantData participant) {
+  Widget _buildParticipantCard(OrganizeSeeParticipantsShortInfoUser user) {
+    final blockViewModel = _getBlockViewModel(user.id);
+    final deleteViewModel = _getDeleteViewModel(user.id);
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: 16.h),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: AppColors.whiteColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -283,113 +289,190 @@ class _ManageParticipantsScreenState extends State<ManageParticipantsScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: AppColors.primaryColor,
-                child: AppText(
-                  text: participant.name.split(' ').map((e) => e[0]).join(''),
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              // Profile Image - Now clickable
+              GestureDetector(
+                onTap: () {
+                  _navigateToParticipantDetails(user);
+                },
+                child: Container(
+                  width: 50.w,
+                  height: 50.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primaryColor, width: 2.w),
+                  ),
+                  child: ClipOval(
+                    child: user.file != null && user.file!.isNotEmpty
+                        ? Image.network(
+                      user.file!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildDefaultAvatar(user.name);
+                      },
+                    )
+                        : _buildDefaultAvatar(user.name),
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppText(
-                      text: participant.name,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                    GestureDetector(
+                      onTap: () {
+                        _navigateToParticipantDetails(user);
+                      },
+                      child: AppText(
+                        text: user.name,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2.h),
+                    if (user.organization != null && user.organization!.isNotEmpty)
+                      AppText(
+                        text: user.organization!,
+                        fontSize: 13.sp,
+                        color: AppColors.darkgrey,
+                      ),
                     AppText(
-                      text: participant.title,
-                      fontSize: 13,
-                      color: AppColors.darkgrey,
-                    ),
-                    AppText(
-                      text: participant.email,
-                      fontSize: 13,
+                      text: user.email,
+                      fontSize: 13.sp,
                       color: AppColors.darkgrey,
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: participant.statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: user.isBlocked ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: AppText(
-                  text: participant.status,
-                  fontSize: 11,
+                  text: user.isBlocked ? 'Blocked' : 'Active',
+                  fontSize: 10.sp,
                   fontWeight: FontWeight.w500,
-                  color: participant.statusColor,
+                  color: user.isBlocked ? Colors.red : Colors.green,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const AppText(
-            text: 'Dr. Johnathan is a professor of Political Science at Cairo University with expertise in international relations and Middle Eastern diplomacy. She has published extensively on regional cooperation and has advised multiple governments and organizations on policy development.',
-            fontSize: 12,
-            color: AppColors.darkgrey,
-          ),
-          const SizedBox(height: 16),
+          SizedBox(height: 12.h),
+          if (user.organization != null && user.organization!.isNotEmpty)
+            AppText(
+              text: '${user.name} is a ${user.organization} with email ${user.email}.',
+              fontSize: 12.sp,
+              color: AppColors.darkgrey,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          SizedBox(height: 16.h),
+
+          // Fixed Button Row - No Text Wrapping
           Row(
             children: [
+              // View Details Button
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.primaryColor),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const AppText(
-                    text: 'View Details',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.primaryColor,
+                flex: 2,
+                child: SizedBox(
+                  height: 36.h,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      _navigateToParticipantDetails(user);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: AppColors.primaryColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                      padding: EdgeInsets.symmetric(horizontal: 4.w),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: AppText(
+                        text: 'View Details',
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.primaryColor,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8.w),
+
+              // Delete and Block Buttons
               Expanded(
+                flex: 3,
                 child: Row(
                   children: [
+                    // Delete Button
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {},
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: AppColors.primaryColor),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const AppText(
-                          text: 'Edit',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.primaryColor,
-                        ),
+                      child: SizedBox(
+                        height: 36.h,
+                        child: Obx(() {
+                          return OutlinedButton(
+                            onPressed: deleteViewModel.isLoading.value
+                                ? null
+                                : () => _showDeleteConfirmation(user.id, user.name, deleteViewModel),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.red),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                              padding: EdgeInsets.symmetric(horizontal: 4.w),
+                            ),
+                            child: deleteViewModel.isLoading.value
+                                ? SizedBox(
+                              width: 16.w,
+                              height: 16.w,
+                              child: CircularProgressIndicator(strokeWidth: 2.w),
+                            )
+                                : FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: AppText(
+                                text: 'Delete',
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.red,
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8.w),
+
+                    // Block/Unblock Button
                     Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {},
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.darkgrey),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const AppText(
-                          text: 'Block',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.darkgrey,
-                        ),
+                      child: SizedBox(
+                        height: 36.h,
+                        child: Obx(() {
+                          return OutlinedButton(
+                            onPressed: blockViewModel.isLoading.value
+                                ? null
+                                : () => _showBlockConfirmation(user.id, user.name, user.isBlocked, blockViewModel),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: user.isBlocked ? Colors.green : Colors.red),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                              padding: EdgeInsets.symmetric(horizontal: 4.w),
+                            ),
+                            child: blockViewModel.isLoading.value
+                                ? SizedBox(
+                              width: 16.w,
+                              height: 16.w,
+                              child: CircularProgressIndicator(strokeWidth: 2.w),
+                            )
+                                : FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: AppText(
+                                text: user.isBlocked ? 'Unblock' : 'Block',
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                                color: user.isBlocked ? Colors.green : Colors.red,
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
                   ],
@@ -401,26 +484,147 @@ class _ManageParticipantsScreenState extends State<ManageParticipantsScreen> {
       ),
     );
   }
+  void _navigateToParticipantDetails(OrganizeSeeParticipantsShortInfoUser user) {
+    // Convert OrganizeSeeParticipantsShortInfoUser to OrganizerDashboardSmallDetailShowRecentUser
+    final detailUser = OrganizerDashboardSmallDetailShowRecentUser(
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      file: user.file,
+      role: user.role,
+      organization: user.organization,
+      photo: user.photo,
+      isBlocked: user.isBlocked,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    );
+
+    Get.to(() => ParticipantDetailScreen(user: detailUser));
+  }
+  Widget _buildDefaultAvatar(String name) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.brown,
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: AppText(
+          text: name.isNotEmpty ? name[0] : 'U',
+          fontSize: 16.sp,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmation(int userId, String userName, OrganizerDeleteUserViewModel deleteViewModel) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: AppText(
+            text: 'Delete Participant',
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+          ),
+          content: AppText(
+            text: 'Are you sure you want to delete $userName? This action cannot be undone.',
+            fontSize: 14.sp,
+            color: AppColors.darkgrey,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: AppText(
+                text: 'Cancel',
+                fontSize: 14.sp,
+                color: AppColors.darkgrey,
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final success = await deleteViewModel.deleteUser(userId);
+                if (success) {
+                  _participantsViewModel.fetchParticipantsData();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+              ),
+              child: AppText(
+                text: 'Delete',
+                fontSize: 14.sp,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showBlockConfirmation(int userId, String userName, bool isCurrentlyBlocked, OrganizerBlockUserViewModel blockViewModel) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          title: AppText(
+            text: isCurrentlyBlocked ? 'Unblock Participant' : 'Block Participant',
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+          ),
+          content: AppText(
+            text: isCurrentlyBlocked
+                ? 'Are you sure you want to unblock $userName?'
+                : 'Are you sure you want to block $userName? They will not be able to access the app.',
+            fontSize: 14.sp,
+            color: AppColors.darkgrey,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: AppText(
+                text: 'Cancel',
+                fontSize: 14.sp,
+                color: AppColors.darkgrey,
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final success = await blockViewModel.blockUser(userId, !isCurrentlyBlocked);
+                if (success) {
+                  _participantsViewModel.fetchParticipantsData();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isCurrentlyBlocked ? Colors.green : Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+              ),
+              child: AppText(
+                text: isCurrentlyBlocked ? 'Unblock' : 'Block',
+                fontSize: 14.sp,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
     searchController.dispose();
+    // Dispose all viewmodels
+    _blockViewModels.forEach((key, value) => value.dispose());
+    _deleteViewModels.forEach((key, value) => value.dispose());
     super.dispose();
   }
-}
-
-class ParticipantData {
-  final String name;
-  final String title;
-  final String email;
-  final String status;
-  final Color statusColor;
-
-  ParticipantData({
-    required this.name,
-    required this.title,
-    required this.email,
-    required this.status,
-    required this.statusColor,
-  });
 }

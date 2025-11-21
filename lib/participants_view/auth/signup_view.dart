@@ -103,28 +103,28 @@ class _SignupScreenState extends State<SignupScreen> {
                             fontWeight: FontWeight.w500,
                             color: AppColors.primaryColor,
                           ),
-                          const SizedBox(height: 16),
+                          // const SizedBox(height: 16),
 
                           /// Role Buttons
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              _roleButton(
-                                label: "Organizer View",
-                                onTap: () => Get.to(const OrganizerLoginScreen()),
-                              ),
-                              _roleButton(
-                                label: "Speaker View",
-                                onTap: () => Get.to(const SpeakerLoginScreen()),
-                              ),
-                              _roleButton(
-                                label: "Sponsor View",
-                                onTap: () => Get.to(const SponserLoginScreen()),
-                              ),
-                            ],
-                          ),
+                          // Wrap(
+                          //   spacing: 10,
+                          //   runSpacing: 10,
+                          //   alignment: WrapAlignment.center,
+                          //   children: [
+                          //     _roleButton(
+                          //       label: "Organizer View",
+                          //       onTap: () => Get.to(const OrganizerLoginScreen()),
+                          //     ),
+                          //     _roleButton(
+                          //       label: "Speaker View",
+                          //       onTap: () => Get.to(const SpeakerLoginScreen()),
+                          //     ),
+                          //     _roleButton(
+                          //       label: "Sponsor View",
+                          //       onTap: () => Get.to(const SponserLoginScreen()),
+                          //     ),
+                          //   ],
+                          // ),
                         ],
                       ),
                     ),

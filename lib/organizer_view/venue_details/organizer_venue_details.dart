@@ -7,8 +7,13 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../images/images.dart';
+import '../../data/response_models/organizer_response_models/organizer_venue_show_model.dart';
 
 class OrganizerVenueDetails extends StatefulWidget {
+  final OrganizerVenueShowEvent event;
+
+  const OrganizerVenueDetails({super.key, required this.event});
+
   @override
   _OrganizerVenueDetailsState createState() => _OrganizerVenueDetailsState();
 }
@@ -18,9 +23,6 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
   GoogleMapController? _mapController;
   Set<Marker> _mapMarkers = {};
 
-  // Default location (e.g., New York area)
-  static const LatLng _defaultLocation = LatLng(40.7128, -74.0060);
-
   @override
   void initState() {
     super.initState();
@@ -29,30 +31,27 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
 
   void _createMapMarkers() {
     _mapMarkers.clear();
-    // Marker for "A12 Hall 1"
-    _mapMarkers.add(
-      Marker(
-        markerId: const MarkerId('a12_hall_1'),
-        position: LatLng(40.7589, -73.9851), // Example position (adjust as needed)
-        infoWindow: const InfoWindow(title: 'A12 Hall 1', snippet: 'Main Venue'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      ),
-    );
-    // Marker for "You" (simulate user location)
-    _mapMarkers.add(
-      Marker(
-        markerId: const MarkerId('user_location'),
-        position: LatLng(40.7128, -74.0060), // Default user position (adjust with Geolocator if needed)
-        infoWindow: const InfoWindow(title: 'You', snippet: 'Your current location'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-      ),
-    );
+
+    final position = widget.event.getLatLngFromUrl();
+    if (position != null) {
+      _mapMarkers.add(
+        Marker(
+          markerId: MarkerId('event_location_${widget.event.id}'),
+          position: position,
+          infoWindow: InfoWindow(
+            title: widget.event.name,
+            snippet: widget.event.location ?? 'Event Location',
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: CustomAppDrawer(),
+      drawer: const CustomAppDrawer(),
       backgroundColor: Colors.grey[50],
       body: CustomScrollView(
         slivers: [
@@ -61,32 +60,25 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
             expandedHeight: 250,
             pinned: true,
             backgroundColor: AppColors.whiteColor,
-            actions: [
-              Container(
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.whiteColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const AppText(
-                  text: 'Exhibitors Details',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
             flexibleSpace: FlexibleSpaceBar(
+              title: AppText(
+                text: widget.event.name,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
               background: Stack(
                 children: [
                   Container(
                     width: double.infinity,
                     height: 250,
-                    decoration: const BoxDecoration(
-                      image: DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800'),
-                        fit: BoxFit.cover,
-                      ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor.withOpacity(0.7),
+                    ),
+                    child: const Icon(
+                      Icons.event,
+                      size: 80,
+                      color: Colors.white,
                     ),
                   ),
                   Container(
@@ -103,20 +95,6 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
                       ),
                     ),
                   ),
-                  Positioned(
-                    bottom: 20,
-                    left: MediaQuery.of(context).size.width / 2 - 30,
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundColor: AppColors.lightred2,
-                      child: AppText(
-                        text: 'CloudTech',
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.whiteColor,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -126,27 +104,20 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                // Company Description
-                _buildCompanySection(),
+                // Event Description
+                _buildEventSection(),
 
-                // Hall Selection Buttons
-                _buildHallSelection(),
-                _buildTable(),
+                // Sponsors Section
+                if (widget.event.sponsors.isNotEmpty) _buildSponsorsSection(),
 
-                // Venue Layout
-                // _buildVenueLayout(),
+                // Exhibitors Section
+                if (widget.event.exhibitors.isNotEmpty) _buildExhibitorsSection(),
 
-                // Locations Section
-                _buildLocationsSection(),
-
-                // Facilities Section
-                _buildFacilitiesSection(),
+                // Event Details
+                _buildEventDetailsSection(),
 
                 // Map Section
-                _buildMapSection(),
-
-                // Social Media Section
-                _buildSocialMediaSection(),
+                if (widget.event.getLatLngFromUrl() != null) _buildMapSection(),
 
                 SizedBox(height: 20),
               ],
@@ -157,7 +128,7 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
     );
   }
 
-  Widget _buildCompanySection() {
+  Widget _buildEventSection() {
     return Container(
       margin: EdgeInsets.all(16),
       padding: EdgeInsets.all(20),
@@ -177,219 +148,57 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppText(
-            text:
-            'CloudTech Solutions',
-
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-
+            text: widget.event.name,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
           SizedBox(height: 12),
           AppText(
-            text:
-            'CloudTech Solutions is a leading provider of enterprise software solutions and digital transformation services, helping Fortune 500 companies worldwide streamline operations, enhance productivity, and embrace innovation. With decades of experience across multiple industries, TechWorld specializes in creating customized technology solutions that drive growth, improve customer experiences, and enable organizations to stay competitive in an ever-evolving digital landscape. Committed to excellence, TechWorld combines cutting-edge tools, expert consulting, and best-in-class support to deliver measurable business outcomes and empower companies to achieve their strategic goals.',
-
-              fontSize: 14,
-              color: AppColors.darkgrey,
-
-
+            text: widget.event.description,
+            fontSize: 14,
+            color: AppColors.darkgrey,
           ),
           SizedBox(height: 20),
           AppText(
-            text:
-            'Contact Information',
-
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-
+            text: 'Event Information',
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
           SizedBox(height: 16),
-          _buildContactItem(
-            Icons.language,
-            'Website',
-            'www.techcorp.com',
+          _buildInfoItem(
+            Icons.location_on,
+            'Location',
+            widget.event.location ?? 'Not specified',
             Colors.blue,
-                () => _launchURL('https://www.techcorp.com'),
           ),
-          _buildContactItem(
-            Icons.email,
-            'Email',
-            'contact@techcorp.com',
+          _buildInfoItem(
+            Icons.calendar_today,
+            'Sessions',
+            '${widget.event.totalSessions} Sessions',
             Colors.green,
-                () => _launchURL('mailto:contact@techcorp.com'),
           ),
-          _buildContactItem(
-            Icons.phone,
-            'Phone',
-            '+1 (555) 123-4567',
-            Colors.purple,
-                () => _launchURL('tel:+15551234567'),
-          ),
+          if (widget.event.startTime != null)
+            _buildInfoItem(
+              Icons.access_time,
+              'Start Time',
+              _formatDateTime(widget.event.startTime!),
+              Colors.purple,
+            ),
+          if (widget.event.endTime != null)
+            _buildInfoItem(
+              Icons.access_time,
+              'End Time',
+              _formatDateTime(widget.event.endTime!),
+              Colors.orange,
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildContactItem(IconData icon, String label, String value, Color color, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text:
-                    label,
-
-                      fontSize: 12,
-                      color: AppColors.darkgrey,
-
-                  ),
-                  AppText(
-                    text:
-                    value,
-
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHallSelection() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildHallButton('Hall A', selectedHall == 'Hall A'),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: _buildHallButton('Hall B', selectedHall == 'Hall B'),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: _buildHallButton('Coffee Lounge', selectedHall == 'Coffee Lounge'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHallButton(String text, bool isSelected) {
-    return GestureDetector(
-      onTap: () => setState(() => selectedHall = text),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.red[700] : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? Colors.red[700]! : Colors.grey[300]!,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 3,
-              offset: Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Center(
-          child: AppText(
-            text:
-            text,
-
-              color: isSelected ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w500,
-              fontSize: 12,
-
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTable() {
-    return Container(
-      width: double.infinity,
-      height: 250,
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          image: DecorationImage(image: AssetImage(Images.stages,),fit: BoxFit.cover)
-      ),
-    );
-  }
-
-  Widget _buildLocationsSection() {
-    final locations = [
-      {'icon': Icons.mic, 'name': 'Hall A', 'subtitle': 'Main Auditorium', 'color': Colors.red},
-      {'icon': Icons.groups, 'name': 'Hall B', 'subtitle': 'Conference Room', 'color': Colors.blue},
-      {'icon': Icons.store, 'name': 'Exhibitions', 'subtitle': 'Sponsor Booth', 'color': Colors.green},
-      {'icon': Icons.coffee, 'name': 'Networking', 'subtitle': 'Coffee Lounge', 'color': Colors.orange},
-    ];
-
-    return _buildSectionCard(
-      'Locations',
-      Column(
-        children: locations.map((location) => _buildLocationItem(
-          location['icon'] as IconData,
-          location['name'] as String,
-          location['subtitle'] as String,
-          location['color'] as Color,
-        )).toList(),
-      ),
-    );
-  }
-
-  Widget _buildFacilitiesSection() {
-    final facilities = [
-      {'icon': Icons.wc, 'name': 'Restrooms', 'color': Colors.blue},
-      {'icon': Icons.wifi, 'name': 'WiFi Zone', 'color': Colors.cyan},
-      {'icon': Icons.restaurant, 'name': 'Food Court', 'color': Colors.amber},
-      {'icon': Icons.local_parking, 'name': 'Parking', 'color': Colors.purple},
-      {'icon': Icons.elevator, 'name': 'Elevators', 'color': Colors.green},
-      {'icon': Icons.info, 'name': 'Info Desk', 'color': Colors.indigo},
-    ];
-
-    return _buildSectionCard(
-      'Facilities',
-      Column(
-        children: facilities.map((facility) => _buildFacilityItem(
-          facility['icon'] as IconData,
-          facility['name'] as String,
-          facility['color'] as Color,
-        )).toList(),
-      ),
-    );
-  }
-
-  Widget _buildSectionCard(String title, Widget content) {
+  Widget _buildSponsorsSection() {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: EdgeInsets.all(20),
@@ -409,56 +218,135 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppText(
-            text:
-            title,
-
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-
+            text: 'Sponsors (${widget.event.sponsors.length})',
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
           SizedBox(height: 16),
-          content,
+          GridView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 3,
+            ),
+            itemCount: widget.event.sponsors.length,
+            itemBuilder: (context, index) {
+              final sponsor = widget.event.sponsors[index];
+              return _buildSponsorExhibitorItem(
+                sponsor.name,
+                sponsor.email,
+                sponsor.picUrl,
+                Colors.blue,
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLocationItem(IconData icon, String name, String subtitle, Color color) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+  Widget _buildExhibitorsSection() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppText(
+            text: 'Exhibitors (${widget.event.exhibitors.length})',
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+          SizedBox(height: 16),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 3,
+            ),
+            itemCount: widget.event.exhibitors.length,
+            itemBuilder: (context, index) {
+              final exhibitor = widget.event.exhibitors[index];
+              return _buildSponsorExhibitorItem(
+                exhibitor.name,
+                exhibitor.email,
+                exhibitor.picUrl,
+                Colors.green,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSponsorExhibitorItem(String name, String email, String? imageUrl, Color color) {
+    return Container(
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
       child: Row(
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
+          if (imageUrl != null && imageUrl.isNotEmpty)
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: NetworkImage(imageUrl),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.business, color: Colors.white, size: 20),
             ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          SizedBox(width: 16),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AppText(
-                  text:
-                  name,
-
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-
+                  text: name,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
                 ),
                 AppText(
-                  text:
-                  subtitle,
-
-                    fontSize: 12,
-                    color: AppColors.darkgrey,
-
+                  text: email,
+                  fontSize: 12,
+                  color: AppColors.darkgrey,
                 ),
               ],
             ),
@@ -468,36 +356,69 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
     );
   }
 
-  Widget _buildFacilityItem(IconData icon, String name, Color color) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 20),
+  Widget _buildEventDetailsSection() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: Offset(0, 2),
           ),
-          SizedBox(width: 16),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           AppText(
-            text:
-            name,
-
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
-
+            text: 'Event Details',
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+          SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (widget.event.mapstatus == true)
+                _buildDetailChip('Map Visible', Colors.green),
+              _buildDetailChip('${widget.event.totalSessions} Sessions', Colors.blue),
+              _buildDetailChip('${widget.event.sponsors.length} Sponsors', Colors.purple),
+              _buildDetailChip('${widget.event.exhibitors.length} Exhibitors', Colors.orange),
+            ],
           ),
         ],
       ),
     );
   }
 
+  Widget _buildDetailChip(String text, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: AppText(
+        text: text,
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: color,
+      ),
+    );
+  }
+
   Widget _buildMapSection() {
+    final position = widget.event.getLatLngFromUrl();
+    if (position == null) return SizedBox();
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       height: 300,
@@ -516,8 +437,8 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
         borderRadius: BorderRadius.circular(12),
         child: GoogleMap(
           initialCameraPosition: CameraPosition(
-            target: _defaultLocation,
-            zoom: 11.0,
+            target: position,
+            zoom: 15.0,
           ),
           markers: _mapMarkers,
           onMapCreated: (GoogleMapController controller) {
@@ -525,119 +446,58 @@ class _OrganizerVenueDetailsState extends State<OrganizerVenueDetails> {
           },
           mapType: MapType.normal,
           zoomControlsEnabled: true,
-          myLocationEnabled: true, // Requires location permissions
+          myLocationEnabled: true,
           myLocationButtonEnabled: true,
         ),
       ),
     );
   }
 
-  Widget _buildSocialMediaSection() {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildInfoItem(IconData icon, String label, String value, Color color) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
         children: [
-          AppText(
-            text:
-            'Follow Us',
-
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-
-          ),
-          SizedBox(height: 16),
-          _buildSocialButton('LinkedIn', Colors.blue[700]!, Image.asset(Images.linkedin2, height: 20, width: 20)),
-          SizedBox(height: 8),
-          _buildSocialButton('Twitter', Colors.blue[400]!, Image.asset(Images.twitterIcon, height: 20, width: 20)),
-          SizedBox(height: 8),
-          _buildSocialButton('YouTube', Colors.red[600]!, Image.asset(Images.youtube, height: 20, width: 20)),
-
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSocialButton(String platform, Color color, Image image) {
-    return InkWell(
-      onTap: () => _showSocialMediaDialog(platform),
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            image, // 👈 directly use
-            SizedBox(width: 8),
-            AppText(
-              text:
-              platform,
-
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _launchURL(String url) async {
-    try {
-      final Uri uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        Get.snackbar(
-          'Error',
-          'Could not open $url',
-          backgroundColor: Colors.red[100],
-          colorText: Colors.red[800],
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        'Info',
-        'Opening $url...',
-        backgroundColor: Colors.blue[100],
-        colorText: Colors.blue[800],
-      );
-    }
-  }
-
-  void _showSocialMediaDialog(String platform) {
-    Get.dialog(
-      AlertDialog(
-        title: Text('Follow on $platform'),
-        content: Text('Opening $platform profile...'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: Text('OK'),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  text: label,
+                  fontSize: 12,
+                  color: AppColors.darkgrey,
+                ),
+                AppText(
+                  text: value,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatDateTime(String dateTimeString) {
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateTimeString;
+    }
   }
 
   @override

@@ -1,39 +1,16 @@
-import 'package:al_sharq_conference/custom_widgets/custom_button.dart';
-import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
-import 'package:al_sharq_conference/organizer_view/add_new_venue/add_new_venue_view.dart';
-import 'package:al_sharq_conference/organizer_view/venue_details/organizer_venue_details.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geolocator/geolocator.dart';
-
-import '../../app_colors/app_colors.dart';
-import '../../custom_widgets/app_text.dart';
-import '../../custom_widgets/custom_text_field.dart';
-
-class OrganizerVenueLocation {
-  final String name;
-  final String description;
-  final String details;
-  final String type;
-  final String sessionCount;
-  final Color color;
-  final LatLng position;
-  final bool isMapView;
-
-  OrganizerVenueLocation({
-    required this.name,
-    required this.description,
-    required this.details,
-    required this.type,
-    required this.sessionCount,
-    required this.color,
-    required this.position,
-    this.isMapView = false,
-  });
-}
+import 'package:al_sharq_conference/app_colors/app_colors.dart';
+import 'package:al_sharq_conference/custom_widgets/app_text.dart';
+import 'package:al_sharq_conference/custom_widgets/custom_button.dart';
+import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
+import 'package:al_sharq_conference/custom_widgets/custom_text_field.dart';
+import 'package:al_sharq_conference/organizer_view/add_new_venue/add_new_venue_view.dart';
+import 'package:al_sharq_conference/organizer_view/venue_details/organizer_venue_details.dart';
+import '../../data/response_models/organizer_response_models/organizer_venue_show_model.dart';
+import '../../view_model/organizer_viewmodels/organizer_event_delete_viewmodel.dart';
+import '../../view_model/organizer_viewmodels/organizer_venue_show_viewmodel.dart';
+import 'interactive_venue_map.dart';
 
 class OrganizerVenueMapsScreen extends StatefulWidget {
   const OrganizerVenueMapsScreen({super.key});
@@ -44,135 +21,78 @@ class OrganizerVenueMapsScreen extends StatefulWidget {
 
 class _OrganizerVenueMapsScreenState extends State<OrganizerVenueMapsScreen> {
   final TextEditingController searchController = TextEditingController();
-  GoogleMapController? _mapController;
-  Position? _userPosition;
-  Set<Marker> _markers = {};
-
-  // Default location (New York area as shown in your screenshot)
-  static const LatLng _defaultLocation = LatLng(40.7128, -74.0060);
-
-  final List<OrganizerVenueLocation> locations = [
-    OrganizerVenueLocation(
-      name: 'Main Hall Map',
-      description: 'www.techcorp.com',
-      details: 'contact@techcorp.com\n\nDr. Johnathan is a professor of Political Science at Cairo University with expertise in international relations and Middle Eastern diplomacy. She has published extensively on regional cooperation and has advised multiple governments and organizations on policy development.',
-      type: 'Keynote Speaker',
-      sessionCount: '3 Sessions',
-      color: AppColors.primaryColor,
-      position: LatLng(40.7589, -73.9851), // A12 Hall 1 position
-      isMapView: true,
-    ),
-    OrganizerVenueLocation(
-      name: 'Main Hall Map',
-      description: 'www.techcorp.com',
-      details: 'contact@techcorp.com\n\nDr. Johnathan is a professor of Political Science at Cairo University with expertise in international relations and Middle Eastern diplomacy. She has published extensively on regional cooperation and has advised multiple governments and organizations on policy development.',
-      type: 'Keynote Speaker',
-      sessionCount: '3 Sessions',
-      color: Colors.green,
-      position: LatLng(40.6892, -74.0445), // Venue 01 position
-      isMapView: true,
-    ),
-    OrganizerVenueLocation(
-      name: 'Main Hall Map',
-      description: 'www.techcorp.com',
-      details: 'contact@techcorp.com\n\nDr. Johnathan is a professor of Political Science at Cairo University with expertise in international relations and Middle Eastern diplomacy. She has published extensively on regional cooperation and has advised multiple governments and organizations on policy development.',
-      type: 'Keynote Speaker',
-      sessionCount: '3 Sessions',
-      color: Colors.blue,
-      position: LatLng(40.7282, -73.7949),
-      isMapView: true,
-    ),
-  ];
+  final OrganizerVenueShowViewModel _venueViewModel = Get.put(OrganizerVenueShowViewModel());
+  final OrganizerEventDeleteViewModel _deleteViewModel = Get.put(OrganizerEventDeleteViewModel());
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
-    _createMarkers();
+    _loadVenueData();
   }
 
-  Future<void> _getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('Location services disabled');
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          print('Location permission denied');
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        print('Location permission permanently denied');
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition();
-      print('Current position: ${position.latitude}, ${position.longitude}');
-      setState(() {
-        _userPosition = position;
-      });
-      _updateUserMarker();
-    } catch (e) {
-      print('Error getting location: $e');
-    }
-  }
-  void _createMarkers() {
-    _markers.clear();
-    for (int i = 0; i < locations.length; i++) {
-      final location = locations[i];
-      String markerId = 'venue_$i';
-      String markerLabel = i == 0 ? 'A12 Hall 1' : i == 1 ? 'Venue 01' : 'Venue 02';
-      _markers.add(
-        Marker(
-          markerId: MarkerId(markerId),
-          position: location.position,
-          infoWindow: InfoWindow(
-            title: markerLabel,
-            snippet: location.type,
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            location.color == AppColors.primaryColor
-                ? BitmapDescriptor.hueRed
-                : location.color == Colors.green
-                ? BitmapDescriptor.hueGreen
-                : BitmapDescriptor.hueBlue,
-          ),
-        ),
-      );
-    }
-    print('Markers created: ${_markers.length}');
-    _updateUserMarker();
+  void _loadVenueData() {
+    _venueViewModel.getVenueSummary();
   }
 
-  void _updateUserMarker() {
-    if (_userPosition != null) {
-      _markers.removeWhere((marker) => marker.markerId.value == 'user_location');
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('user_location'),
-          position: LatLng(_userPosition!.latitude, _userPosition!.longitude),
-          infoWindow: const InfoWindow(
-            title: 'You',
-            snippet: 'Your current location',
+  void _showDeleteDialog(OrganizerVenueShowEvent event) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        ),
-      );
-      setState(() {});
-    }
+          title: const AppText(
+            text: 'Delete Event',
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+          content: AppText(
+            text: 'Are you sure you want to delete "${event.name}"? This action cannot be undone.',
+            fontSize: 14,
+            color: AppColors.darkgrey,
+            textAlign: TextAlign.center,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const AppText(
+                text: 'Cancel',
+                fontSize: 14,
+                color: AppColors.darkgrey,
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final success = await _deleteViewModel.deleteEvent(event.id);
+                if (success) {
+                  _loadVenueData();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const AppText(
+                text: 'Delete',
+                fontSize: 14,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: CustomAppDrawer(),
+      drawer: const CustomAppDrawer(),
       backgroundColor: AppColors.lightGreyColor,
       appBar: AppBar(
         backgroundColor: AppColors.whiteColor,
@@ -183,69 +103,338 @@ class _OrganizerVenueMapsScreenState extends State<OrganizerVenueMapsScreen> {
           fontWeight: FontWeight.w600,
           color: Colors.black,
         ),
-
       ),
-      body: Column(
-        children: [
-          // Search Bar
-          Container(
-            color: AppColors.whiteColor,
-            padding: const EdgeInsets.all(16),
-            child: CustomTextField(
-              hintText: 'Search...',
-              controller: searchController,
-              suffixIcon: Icons.tune,
-              suffixIconColor: AppColors.primaryColor,
+      body: Obx(() {
+        if (_venueViewModel.isLoading.value) {
+          return const Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primaryColor,
             ),
-          ),
+          );
+        }
 
-          // Google Map
-          Container(
-            height: 250,
-            margin: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+        if (_venueViewModel.error.value.isNotEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AppText(
+                  text: 'Error: ${_venueViewModel.error.value}',
+                  fontSize: 16,
+                  color: Colors.red,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                CustomButton(
+                  text: 'Retry',
+                  onPressed: _loadVenueData,
                 ),
               ],
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child:GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: _userPosition != null
-                      ? LatLng(_userPosition!.latitude, _userPosition!.longitude)
-                      : _defaultLocation,
-                  zoom: 11.0,
+          );
+        }
+
+        final venueData = _venueViewModel.venueData.value;
+        final events = venueData.events;
+
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              // Search Bar
+              Container(
+                color: AppColors.whiteColor,
+                padding: const EdgeInsets.all(16),
+                child: CustomTextField(
+                  hintText: 'Search venues...',
+                  controller: searchController,
+                  suffixIcon: Icons.search,
+                  suffixIconColor: AppColors.primaryColor,
                 ),
-                markers: _markers,
-                onMapCreated: (GoogleMapController controller) {
-                  _mapController = controller;
-                  print('Google Map initialized successfully');
-                  setState(() {}); // Ensure UI updates after map creation
-                },
-                myLocationEnabled: _userPosition != null,
-                myLocationButtonEnabled: true,
-                mapType: MapType.normal,
-                zoomControlsEnabled: false,
               ),
+
+              // Stats Cards
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Total Sessions',
+                        venueData.totalSessions.toString(),
+                        Icons.event,
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Live Now',
+                        venueData.liveSessions.toString(),
+                        Icons.play_circle_filled,
+                        Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Scheduled',
+                        venueData.scheduledSessions.toString(),
+                        Icons.schedule,
+                        Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Interactive Map
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: VenueMapComponent(
+                  events: events,
+                  onMarkerTap: (event) {
+                    Get.to(() => OrganizerVenueDetails(event: event));
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Add New Venue Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: CustomButton(
+                  text: "Add New Venue",
+                  onPressed: () => Get.to(() => AddNewVenueScreen()),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Venue Cards List
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: events.length,
+                itemBuilder: (context, index) {
+                  final event = events[index];
+                  return _buildLocationCard(event, index);
+                },
+              ),
+
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.whiteColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          AppText(
+            text: value,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+          const SizedBox(height: 4),
+          AppText(
+            text: title,
+            fontSize: 11,
+            color: AppColors.darkgrey,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationCard(OrganizerVenueShowEvent event, int index) {
+    final color = _getCardColor(index);
+    final hasLocation = event.getLatLngFromUrl() != null;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: AppColors.whiteColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Icon(
+                      hasLocation ? Icons.location_on : Icons.location_off,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        text: event.name,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                      const SizedBox(height: 4),
+                      AppText(
+                        text: event.location ?? 'Check map',
+                        fontSize: 13,
+                        color: AppColors.darkgrey,
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        Get.to(() => OrganizerVenueDetails(event: event));
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const AppText(
+                          text: 'Details',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () {
+                        Get.to(() => AddNewVenueScreen(eventId: event.id));
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const AppText(
+                          text: 'Edit',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () => _showDeleteDialog(event),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const AppText(
+                          text: 'Delete',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          CustomButton(text: "Add new venue",onPressed: ()=>Get.to(AddNewVenueScreen()),),
-
-          // Venue Cards List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: locations.length,
-              itemBuilder: (context, index) {
-                final location = locations[index];
-                return _buildLocationCard(location, index);
-              },
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  text: event.description,
+                  fontSize: 12,
+                  color: AppColors.darkgrey,
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildInfoChip(
+                      '${event.totalSessions} Total',
+                      Icons.event,
+                      Colors.blue,
+                    ),
+                    if (event.liveSessions > 0)
+                      _buildInfoChip(
+                        '${event.liveSessions} Live',
+                        Icons.play_circle_filled,
+                        Colors.red,
+                      ),
+                    if (event.scheduledSessions > 0)
+                      _buildInfoChip(
+                        '${event.scheduledSessions} Scheduled',
+                        Icons.schedule,
+                        Colors.orange,
+                      ),
+                    if (event.mapstatus == true)
+                      _buildInfoChip(
+                        'Map Visible',
+                        Icons.map,
+                        Colors.green,
+                      ),
+                    if (!hasLocation)
+                      _buildInfoChip(
+                        'No Location',
+                        Icons.location_off,
+                        Colors.grey,
+                      ),
+                  ],
+                ),
+              ],
             ),
           ),
         ],
@@ -253,146 +442,41 @@ class _OrganizerVenueMapsScreenState extends State<OrganizerVenueMapsScreen> {
     );
   }
 
-  Widget _buildLocationCard(OrganizerVenueLocation location, int index) {
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>  OrganizerVenueDetails(), // Navigate to OrganizerVenueDetails
+  Widget _buildInfoChip(String label, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 4),
+          AppText(
+            text: label,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: color,
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppColors.whiteColor,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: location.color,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: AppText(
-                        text: 'Just Launched',
-                        fontSize: 10,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          text: location.name,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                        ),
-                        const SizedBox(height: 4),
-                        AppText(
-                          text: location.description,
-                          fontSize: 13,
-                          color: AppColors.darkgrey,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>  OrganizerVenueDetails(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: AppText(
-                            text: location.type,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>  OrganizerVenueDetails(),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.lightred2.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: AppText(
-                            text: location.sessionCount,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.primaryColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-              child: AppText(
-                text: location.details,
-                fontSize: 12,
-                color: AppColors.darkgrey,
-                textAlign: TextAlign.start,
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
+
+  Color _getCardColor(int index) {
+    switch (index % 3) {
+      case 0: return AppColors.primaryColor;
+      case 1: return Colors.green;
+      case 2: return Colors.blue;
+      default: return AppColors.primaryColor;
+    }
+  }
+
   @override
   void dispose() {
     searchController.dispose();
-    _mapController?.dispose();
     super.dispose();
   }
 }
