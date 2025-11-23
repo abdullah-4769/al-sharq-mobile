@@ -1,128 +1,182 @@
 import 'package:al_sharq_conference/participants_view/forum_chat/chat_list_view.dart';
-import 'package:al_sharq_conference/sponser_view/sponser_exhibitor/sponser_details.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
+import '../../custom_widgets/custom_drawer.dart';
+import '../../data/response_models/sponsor_respone_model/sponsor_dashboard_data_get_model.dart';
 import '../../images/images.dart';
+import '../../participants_view/seesion_details_view/session_detail_view.dart';
+import '../../view_model/sponsor_viewmodel/sponsor_dashboard_data_get_viewmodel.dart';
+import '../../view_model/sponsor_viewmodel/sponsor_profile_get_viewmodel.dart';
+import '../sponsor_profile_screen.dart';
 
-class SponserSession {
-  final String title;
-  final String speaker;
-  final String speakerRole;
-  final String description;
-  final String time;
-  final String duration;
-  final String room;
-  final String type;
-  final bool isBookmarked;
-  final Color typeColor;
-  final String status; // "Completed", "Ongoing", "Upcoming"
-
-  SponserSession({
-    required this.title,
-    required this.speaker,
-    required this.speakerRole,
-    required this.description,
-    required this.time,
-    required this.duration,
-    required this.room,
-    required this.type,
-    this.isBookmarked = false,
-    required this.typeColor,
-    required this.status,
-  });
-}
-
-// Main Conference Dashboard Screen
 class SponserDashboardScreen extends StatefulWidget {
   const SponserDashboardScreen({super.key});
 
   @override
-  _SponserDashboardScreenState createState() =>
-      _SponserDashboardScreenState();
+  _SponserDashboardScreenState createState() => _SponserDashboardScreenState();
 }
 
 class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
+  final SponsorDashboardDataViewModel viewModel = Get.put(SponsorDashboardDataViewModel());
+  final SponsorProfileGetViewModel profileViewModel = Get.put(SponsorProfileGetViewModel());
   TextEditingController _searchController = TextEditingController();
 
-  // Sample data
-  final List<SponserSession> todaySessions = [
-    SponserSession(
-      title: 'Digital Transformation in MENA',
-      speaker: 'Dr. Sarah Hassan',
-      speakerRole: 'Tech Innovation Expert',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '2:00 PM - 3:30 PM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Keynote',
-      typeColor: AppColors.lightBlue,
-      status: 'Completed',
-      isBookmarked: true,
-    ),
-    SponserSession(
-      title: 'The Future of Regional Cooperation',
-      speaker: 'Prof. Omar Khalil',
-      speakerRole: 'Policy Analyst',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '10:00 AM - 11:30 AM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Panel',
-      typeColor: AppColors.warningColor,
-      status: 'In 30 minutes',
-      isBookmarked: true,
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Load both dashboard data and profile data
+    viewModel.fetchSponsorDashboardData();
+    profileViewModel.fetchSponsorProfile();
+  }
 
-  final List<SponserSession> tomorrowSessions = [
-    SponserSession(
-      title: 'Digital Transformation in MENA',
-      speaker: 'Dr. Sarah Hassan',
-      speakerRole: 'Tech Innovation Expert',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '2:00 PM - 3:30 PM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Keynote',
-      typeColor: AppColors.lightBlue,
-      status: 'Upcoming',
-      isBookmarked: false,
-    ),
-    SponserSession(
-      title: 'The Future of Regional Cooperation',
-      speaker: 'Prof. Omar Khalil',
-      speakerRole: 'Policy Analyst',
-      description: 'Exploring the role of diplomacy and collaboration in shaping future policies',
-      time: '10:00 AM - 11:30 AM',
-      duration: '90 minutes',
-      room: 'Hall B',
-      type: 'Panel',
-      typeColor: AppColors.warningColor,
-      status: 'Upcoming',
-      isBookmarked: false,
-    ),
-  ];
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      viewModel.refreshData();
+      profileViewModel.refreshProfile();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.lightGreyColor,
+      drawer: const CustomAppDrawer(),
       appBar: _buildAppBar(),
-      body: SingleChildScrollView(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await viewModel.refreshData();
+           profileViewModel.refreshProfile();
+        },
+        child: Obx(() {
+          if (viewModel.isLoadingData) {
+            return _buildLoadingState();
+          } else if (viewModel.hasError) {
+            return _buildErrorState();
+          } else if (viewModel.hasNoData) {
+            return _buildEmptyState();
+          } else if (viewModel.hasData) {
+            return _buildContent();
+          } else {
+            return _buildLoadingState();
+          }
+        }),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: AppColors.primaryColor),
+          SizedBox(height: 16),
+          AppText(
+            text: 'Loading sponsor data...',
+            fontSize: 16,
+            color: AppColors.darkgrey,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(16),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildSearchBar(),
-            _buildSponsorsCard(),
-            _buildStatsCards(),
-            _buildSessionsList(),
+            Icon(Icons.error_outline, size: 64, color: AppColors.errorColor),
+            SizedBox(height: 16),
+            AppText(
+              text: 'Failed to load data',
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.blackColor,
+            ),
+            SizedBox(height: 8),
+            AppText(
+              text: viewModel.errorMessage.value.isNotEmpty
+                  ? viewModel.errorMessage.value
+                  : 'An unknown error occurred',
+              fontSize: 14,
+              color: AppColors.darkgrey,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            CustomButton(
+              text: 'Retry',
+              onPressed: () => viewModel.refreshData(),
+              backgroundColor: AppColors.primaryColor,
+              height: 40,
+              width: 120,
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.event_busy, size: 64, color: AppColors.mediumGreyColor),
+            SizedBox(height: 16),
+            AppText(
+              text: 'No sessions found',
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.blackColor,
+            ),
+            SizedBox(height: 8),
+            AppText(
+              text: 'There are no sessions available for your sponsor account.',
+              fontSize: 14,
+              color: AppColors.darkgrey,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            CustomButton(
+              text: 'Refresh',
+              onPressed: () => viewModel.refreshData(),
+              backgroundColor: AppColors.primaryColor,
+              height: 40,
+              width: 120,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildSearchBar(),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: _buildStatsCards(),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w),
+            child: _buildSessionsList(),
+          ),
+        ],
       ),
     );
   }
@@ -131,6 +185,12 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
     return AppBar(
       backgroundColor: AppColors.whiteColor,
       elevation: 0,
+      leading: Builder(
+        builder: (context) => IconButton(
+          icon: Icon(Icons.menu, color: AppColors.blackColor),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+      ),
       title: Row(
         children: [
           Container(
@@ -140,12 +200,10 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
               image: DecorationImage(image: AssetImage(Images.alsharqLogo)),
               borderRadius: BorderRadius.circular(8),
             ),
-
           ),
         ],
       ),
       actions: [
-
         CircleAvatar(
           backgroundColor: AppColors.lightred,
           radius: 22,
@@ -156,24 +214,35 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
             icon: Icon(Icons.chat, color: AppColors.blackColor),
           ),
         ),
-        SizedBox(width: 10,),
+        SizedBox(width: 10),
         CircleAvatar(
           backgroundColor: AppColors.lightred,
-
           radius: 22,
-
           child: IconButton(
             onPressed: () {},
             icon: Icon(Icons.notifications_none, color: AppColors.blackColor),
           ),
         ),
-        SizedBox(width: 10,),
-
-        CircleAvatar(
-          radius: 22,
-          backgroundColor: AppColors.mediumGreyColor,
-          child: Image(image: AssetImage(Images.drjohnthan)),
-        ),
+        SizedBox(width: 10),
+        // Profile Avatar with real image
+        Obx(() {
+          final profile = profileViewModel.sponsorProfile.value?.data;
+          return GestureDetector(
+            onTap: () {
+              Get.to(() => SponsorProfileScreen());
+            },
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.mediumGreyColor,
+              backgroundImage: profile?.picUrl.isNotEmpty == true
+                  ? NetworkImage(profile!.picUrl)
+                  : AssetImage(Images.drjohnthan) as ImageProvider,
+              child: profile?.picUrl.isEmpty == true
+                  ? Icon(Icons.person, color: AppColors.whiteColor)
+                  : null,
+            ),
+          );
+        }),
         SizedBox(width: 16),
       ],
     );
@@ -186,7 +255,7 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Search...',
+          hintText: 'Search sessions...',
           hintStyle: TextStyle(color: AppColors.darkgrey),
           prefixIcon: Icon(Icons.search, color: AppColors.darkgrey),
           suffixIcon: Icon(Icons.tune, color: AppColors.primaryColor),
@@ -198,41 +267,9 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
           ),
           contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-      ),
-    );
-  }
-
-  Widget _buildSponsorsCard() {
-    return Container(
-      margin: EdgeInsets.all(16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Color(0xffFFF9E6),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primaryColor.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.star, color: AppColors.whiteColor),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: AppText(
-              text: 'Sponsors',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.blackColor,
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, color: AppColors.primaryColor, size: 16),
-        ],
+        onChanged: (value) {
+          // Implement search functionality if needed
+        },
       ),
     );
   }
@@ -242,11 +279,11 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Expanded(child: _buildStatCard('Total Hosted', '24', Icons.event)),
+          Expanded(child: _buildStatCard('Total Sessions', '${viewModel.totalSessions}', Icons.event)),
           SizedBox(width: 12),
-          Expanded(child: _buildStatCard('Ongoing', '5', Icons.play_circle_filled, color: AppColors.successColor)),
+          Expanded(child: _buildStatCard('Live Sessions', '${viewModel.ongoingSessions}', Icons.play_circle_filled, color: AppColors.successColor)),
           SizedBox(width: 12),
-          Expanded(child: _buildStatCard('Scheduled', '12', Icons.schedule, color: AppColors.warningColor)),
+          Expanded(child: _buildStatCard('Scheduled Sessions', '${viewModel.scheduledSessions}', Icons.schedule, color: AppColors.warningColor)),
         ],
       ),
     );
@@ -301,16 +338,29 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
   }
 
   Widget _buildSessionsList() {
-    return Column(
-      children: [
-        // Today's Sessions
-        _buildDateHeader('Monday, Feb 10, 2025'),
-        ...todaySessions.map((session) => _buildSessionCard(session)),
+    final sessionsByDate = viewModel.sessionsByDate;
 
-        // Tomorrow's Sessions
-        _buildDateHeader('Tuesday, Feb 11, 2025'),
-        ...tomorrowSessions.map((session) => _buildSessionCard(session)),
-      ],
+    if (sessionsByDate.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.all(16),
+        child: AppText(
+          text: 'No sessions available for the selected dates.',
+          fontSize: 14,
+          color: AppColors.darkgrey,
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    return Column(
+      children: sessionsByDate.entries.map((entry) {
+        return Column(
+          children: [
+            _buildDateHeader(viewModel.getFormattedDate(entry.key)),
+            ...entry.value.map((session) => _buildSessionCard(session)),
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -328,7 +378,7 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
             color: AppColors.blackColor,
           ),
           AppText(
-            text: 'View All',
+            text: '${viewModel.sessionsByDate.entries.firstWhere((element) => viewModel.getFormattedDate(element.key) == date).value.length} Sessions',
             fontSize: 14,
             color: AppColors.primaryColor,
           ),
@@ -337,7 +387,15 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
     );
   }
 
-  Widget _buildSessionCard(SponserSession session) {
+  Widget _buildSessionCard(SponsorSession session) {
+    final statusColor = session.isLive ? AppColors.successColor :
+    session.isCompleted ? AppColors.darkgrey :
+    AppColors.warningColor;
+
+    final typeColor = session.category == 'Workshop' ? AppColors.lightBlue :
+    session.category == 'Keynote' ? AppColors.primaryColor :
+    AppColors.warningColor;
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: EdgeInsets.all(16),
@@ -355,7 +413,6 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header with title and bookmark
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -365,65 +422,87 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: AppColors.blackColor,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Icon(
-                session.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                color: session.isBookmarked ? AppColors.primaryColor : AppColors.darkgrey,
-                size: 20,
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: AppText(
+                  text: session.sessionStatus,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: statusColor,
+                ),
               ),
             ],
           ),
           SizedBox(height: 8),
 
-          // Speaker info
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: AppColors.primaryColor,
-                child: AppText(
-                  text: session.speaker.split(' ').map((e) => e[0]).join(''),
-                  fontSize: 10,
-                  color: AppColors.whiteColor,
+          if (session.speakers.isNotEmpty) ...[
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: AppColors.primaryColor,
+                  backgroundImage: session.speakers.first.file.isNotEmpty
+                      ? NetworkImage(session.speakers.first.file)
+                      : null,
+                  child: session.speakers.first.file.isEmpty
+                      ? AppText(
+                    text: session.speakers.first.name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join(''),
+                    fontSize: 10,
+                    color: AppColors.whiteColor,
+                  )
+                      : null,
                 ),
-              ),
-              SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    text: session.speaker,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.blackColor,
+                SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        text: session.speakers.first.name,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.blackColor,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      AppText(
+                        text: 'Speaker',
+                        fontSize: 12,
+                        color: AppColors.darkgrey,
+                      ),
+                    ],
                   ),
-                  AppText(
-                    text: session.status,
-                    fontSize: 12,
-                    color: session.status == 'Completed' ? AppColors.successColor : AppColors.warningColor,
-                  ),
-                ],
-              ),
-            ],
-          ),
-          SizedBox(height: 12),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+          ],
 
-          // Description
-          AppText(
-            text: session.description,
-            fontSize: 13,
-            color: AppColors.darkgrey,
-          ),
-          SizedBox(height: 12),
+          if (session.description.isNotEmpty) ...[
+            AppText(
+              text: session.description,
+              fontSize: 13,
+              color: AppColors.darkgrey,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: 12),
+          ],
 
-          // Time and type info
           Row(
             children: [
               Icon(Icons.access_time, size: 16, color: AppColors.darkgrey),
               SizedBox(width: 4),
               AppText(
-                text: session.time,
+                text: session.timeRange,
                 fontSize: 12,
                 color: AppColors.darkgrey,
               ),
@@ -431,21 +510,20 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: session.typeColor.withOpacity(0.1),
+                  color: typeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: AppText(
-                  text: session.type,
+                  text: session.category,
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
-                  color: session.typeColor == AppColors.lightBlue ? AppColors.darkBlue : Colors.orange,
+                  color: typeColor,
                 ),
               ),
             ],
           ),
           SizedBox(height: 8),
 
-          // Duration and room
           Row(
             children: [
               AppText(
@@ -466,27 +544,27 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
           Row(
             children: [
               AppText(
-                text: 'Room',
+                text: 'Location',
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: AppColors.blackColor,
               ),
               Spacer(),
               AppText(
-                text: session.room,
+                text: session.location,
                 fontSize: 12,
                 color: AppColors.darkgrey,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
           SizedBox(height: 16),
 
-          // Action button
           CustomButton(
-            text: session.status == 'Completed' ? 'View Details' :
-            session.status.contains('minutes') ? 'Join Session' : 'View Details',
+            text: 'View Details',
             onPressed: () {
-              //Get.to(SponsorDetailScreen(sponsorId: sponsor.id,));
+              _handleSessionAction(session);
             },
             backgroundColor: AppColors.primaryColor,
             height: 40,
@@ -496,7 +574,12 @@ class _SponserDashboardScreenState extends State<SponserDashboardScreen> {
     );
   }
 
-
+  void _handleSessionAction(SponsorSession session) {
+    Get.to(() => SessionDetailsScreen(
+      sessionId: session.id,
+      key: ValueKey('session_${session.id}'),
+    ));
+  }
 
   @override
   void dispose() {

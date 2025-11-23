@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/response_models/participant_response_model/event_session_response_model.dart';
 import '../../data/response_models/speaker_response_models/speaker_sessions_detail_show_model.dart';
+import '../../data/response_models/sponsor_respone_model/sponsor_dashboard_data_get_model.dart';
 import '../../speaker_view/manage_session_speaker/manage_session_speaker.dart';
 import '../../view_model/participant_viewmodel/make_session_bookmark_viewmodel.dart';
 import '../../view_model/participant_viewmodel/session_detail_show_viewmodel.dart';
@@ -20,6 +21,7 @@ import '../../view_model/participant_viewmodel/sessionss_register_bookmark_statu
 import '../../utils/shared_preference.dart';
 import '../../view_model/speaker_viewmodels/speaker_dashboard_show_viewmodel.dart';
 import '../../view_model/speaker_viewmodels/speaker_sessions_detail_show_viewmodel.dart';
+import '../../view_model/sponsor_viewmodel/sponsor_dashboard_data_get_viewmodel.dart';
 import '../conference_schedule_view/conference_schedule_view.dart';
 import '../form_create/create_new_form_screen.dart';
 import '../forum_chat/forum_list_view.dart';
@@ -167,20 +169,48 @@ class _SessionDetailsScreenState extends State<SessionDetailsScreen> {
       return 'TBD';
     }
   }
+// Get related sessions specifically for sponsors
+  List<SponsorSession> get _sponsorRelatedSessions {
+    try {
+      // Try to get sponsor view model
+      final sponsorViewModel = Get.find<SponsorDashboardDataViewModel>();
+      final allSponsorSessions = sponsorViewModel.sessions;
 
-  // Get related sessions (all sessions except the current one)
-  List<SessionModel> get _relatedSessions {
-    final allSessions = sessionsController.allSessions;
-    // Filter out the current session and take up to 3 related sessions
-    final related = allSessions
-        .where((session) => session.sessionId != widget.sessionId)
-        .take(3)
-        .toList();
-    print('=== Found ${related.length} related sessions for session ${widget.sessionId} ===');
-    for (var session in related) {
-      print('Related session: ${session.sessionId} - ${session.sessionTitle}');
+      // Filter out current session and get related ones
+      final related = allSponsorSessions
+          .where((session) => session.id != widget.sessionId)
+          .take(3)
+          .toList();
+
+      print('=== Found ${related.length} sponsor related sessions ===');
+      return related;
+    } catch (e) {
+      print('=== Sponsor view model not found, using empty list: $e ===');
+      return [];
     }
-    return related;
+  }
+
+// Updated related sessions getter that works for all user types
+  List<dynamic> get _relatedSessions {
+    // First try to get sponsor sessions
+    final sponsorRelated = _sponsorRelatedSessions;
+    if (sponsorRelated.isNotEmpty) {
+      return sponsorRelated;
+    }
+
+    // Fallback to participant sessions
+    try {
+      final allSessions = sessionsController.allSessions;
+      final related = allSessions
+          .where((session) => session.sessionId != widget.sessionId)
+          .take(3)
+          .toList();
+      print('=== Found ${related.length} participant related sessions ===');
+      return related;
+    } catch (e) {
+      print('=== Error getting participant related sessions: $e ===');
+      return [];
+    }
   }
 
 // Replace your current _navigateToRelatedSession method with this:
@@ -910,8 +940,8 @@ class _SessionDetailsScreenState extends State<SessionDetailsScreen> {
                 }),
                 const SizedBox(height: 24),
 
-                // Related Sessions Section
-                if (relatedSessions.isNotEmpty) ...[
+                // Related Sessions Section - Updated to handle both sponsor and participant sessions
+                if (_relatedSessions.isNotEmpty) ...[
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -924,6 +954,7 @@ class _SessionDetailsScreenState extends State<SessionDetailsScreen> {
                       GestureDetector(
                         onTap: () {
                           print('=== View All related sessions tapped ===');
+                          // Navigate to appropriate screen based on user role
                           Get.to(() => ConferenceScheduleScreen());
                         },
                         child: const AppText(
@@ -936,33 +967,41 @@ class _SessionDetailsScreenState extends State<SessionDetailsScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Dynamic related session cards
-                  ...relatedSessions.map((relatedSession) {
-                    print('=== Rendering related session card for ID: ${relatedSession.sessionId} ===');
-                    return SessionCard(
-                      title: relatedSession.sessionTitle,
-                      speaker: relatedSession.speakers.isNotEmpty
-                          ? relatedSession.speakers.first.fullName
-                          : 'Speaker TBA',
-                      speakerRole: relatedSession.speakers.isNotEmpty
-                          ? relatedSession.speakers.first.bio.length > 20
-                          ? '${relatedSession.speakers.first.bio.substring(0, 20)}...'
-                          : relatedSession.speakers.first.bio
-                          : 'Role TBA',
-                      description: relatedSession.sessionDescription,
-                      time: relatedSession.formattedTime,
-                      duration: _calculateDurationFromModel(relatedSession),
-                      room: relatedSession.displayLocation,
-                      sessionType: relatedSession.category,
-                      isBookmarked: false,
-                      onBookmarkTap: () {
-                        print('=== Bookmark tapped for session ${relatedSession.sessionId} ===');
-                      },
-                      onViewDetails: () {
-                        print('=== View Details tapped for session ${relatedSession.sessionId} ===');
-                        _navigateToRelatedSession(relatedSession.sessionId);
-                      },
-                    );
+                  // Dynamic related session cards - handle both SponsorSession and SessionModel
+                  ..._relatedSessions.map((relatedSession) {
+                    if (relatedSession is SponsorSession) {
+                      // Render SponsorSession card
+                      return _buildSponsorSessionCard(relatedSession);
+                    } else if (relatedSession is SessionModel) {
+                      // Render SessionModel card
+                      print('=== Rendering participant related session card for ID: ${relatedSession.sessionId} ===');
+                      return SessionCard(
+                        title: relatedSession.sessionTitle,
+                        speaker: relatedSession.speakers.isNotEmpty
+                            ? relatedSession.speakers.first.fullName
+                            : 'Speaker TBA',
+                        speakerRole: relatedSession.speakers.isNotEmpty
+                            ? relatedSession.speakers.first.bio.length > 20
+                            ? '${relatedSession.speakers.first.bio.substring(0, 20)}...'
+                            : relatedSession.speakers.first.bio
+                            : 'Role TBA',
+                        description: relatedSession.sessionDescription,
+                        time: relatedSession.formattedTime,
+                        duration: _calculateDurationFromModel(relatedSession),
+                        room: relatedSession.displayLocation,
+                        sessionType: relatedSession.category,
+                        isBookmarked: false,
+                        onBookmarkTap: () {
+                          print('=== Bookmark tapped for session ${relatedSession.sessionId} ===');
+                        },
+                        onViewDetails: () {
+                          print('=== View Details tapped for session ${relatedSession.sessionId} ===');
+                          _navigateToRelatedSession(relatedSession.sessionId);
+                        },
+                      );
+                    } else {
+                      return Container(); // Fallback
+                    }
                   }).toList(),
                 ],
 
@@ -1700,4 +1739,175 @@ class _SessionDetailsScreenState extends State<SessionDetailsScreen> {
       _getUserDataAndFetch();
     }
   }
+
+
+
+// Build session card for SponsorSession
+  Widget _buildSponsorSessionCard(SponsorSession session) {
+    final statusColor = session.isLive ? AppColors.successColor :
+    session.isCompleted ? AppColors.darkgrey :
+    AppColors.warningColor;
+
+    final typeColor = session.category == 'Workshop' ? AppColors.lightBlue :
+    session.category == 'Keynote' ? AppColors.primaryColor :
+    AppColors.warningColor;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.whiteColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with title and status
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: AppText(
+                  text: session.title,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.blackColor,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: AppText(
+                  text: session.sessionStatus,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: statusColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Speaker info
+          if (session.speakers.isNotEmpty) ...[
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 12,
+                  backgroundColor: AppColors.primaryColor,
+                  backgroundImage: session.speakers.first.file.isNotEmpty
+                      ? NetworkImage(session.speakers.first.file)
+                      : null,
+                  child: session.speakers.first.file.isEmpty
+                      ? AppText(
+                    text: session.speakers.first.name.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join(''),
+                    fontSize: 10,
+                    color: AppColors.whiteColor,
+                  )
+                      : null,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        text: session.speakers.first.name,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.blackColor,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      AppText(
+                        text: 'Speaker',
+                        fontSize: 12,
+                        color: AppColors.darkgrey,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Description
+          if (session.description.isNotEmpty) ...[
+            AppText(
+              text: session.description.length > 100
+                  ? '${session.description.substring(0, 100)}...'
+                  : session.description,
+              fontSize: 13,
+              color: AppColors.darkgrey,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Time and location
+          Row(
+            children: [
+              Icon(Icons.access_time, size: 14, color: AppColors.darkgrey),
+              const SizedBox(width: 4),
+              AppText(
+                text: session.timeRange,
+                fontSize: 12,
+                color: AppColors.darkgrey,
+              ),
+              const SizedBox(width: 16),
+              Icon(Icons.location_on, size: 14, color: AppColors.darkgrey),
+              const SizedBox(width: 4),
+              AppText(
+                text: session.location,
+                fontSize: 12,
+                color: AppColors.darkgrey,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Action button
+          SizedBox(
+            width: double.infinity,
+            height: 36,
+            child: ElevatedButton(
+              onPressed: () {
+                _navigateToRelatedSession(session.id);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
+              ),
+              child: const AppText(
+                text: 'View Details',
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+//
 }

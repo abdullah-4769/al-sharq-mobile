@@ -11,6 +11,9 @@ import 'package:get/get.dart';
 import 'package:get/get_core/src/get_main.dart'; // Correct import for SVG
 import 'package:al_sharq_conference/utils/shared_preference.dart';
 
+import '../organizer_view/qrcode_scanner/qrcode_scanner.dart';
+import '../participants_view/auth/login_view.dart';
+
 class CustomAppDrawer extends StatefulWidget {
   const CustomAppDrawer({super.key});
 
@@ -103,11 +106,21 @@ class _CustomAppDrawerState extends State<CustomAppDrawer> {
                   color: Colors.green,
                   onTap: () => Get.to(MyAgendaScreen()),
                 ),
+
+
+                // In your CustomAppDrawer build method, inside the ListView children:
+                _buildEnhancedListTile(
+                  icon: Icons.qr_code_2_outlined,
+                  title: "My QR Code",
+                  color: Colors.deepPurple,
+                  onTap: () => Get.to(QRPassScreen()), // This will navigate to your QR generation screen
+                ),
+
                 _buildEnhancedListTile(
                   icon: Icons.qr_code_scanner_outlined,
                   title: "Scan QR Code",
                   color: Colors.purple,
-                  onTap: () => Get.to(QRPassScreen()),
+                  onTap: () => Get.to(QRScannerScreen()),
                 ),
 
                 // Divider
@@ -239,7 +252,6 @@ class _CustomAppDrawerState extends State<CustomAppDrawer> {
       ),
     );
   }
-
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -260,9 +272,10 @@ class _CustomAppDrawerState extends State<CustomAppDrawer> {
             color: AppColors.darkgrey,
           ),
           actions: [
+            // FIXED: Cancel button should only close dialog, not navigate
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(); // Just close the dialog
               },
               child: const AppText(
                 text: 'Cancel',
@@ -272,10 +285,14 @@ class _CustomAppDrawerState extends State<CustomAppDrawer> {
             ),
             ElevatedButton(
               onPressed: () async {
+                // First close the dialog
                 Navigator.of(context).pop();
+
+                // Clear all shared preferences
                 await SharedPrefsHelper.clearAll();
-                // Add your navigation logic here after logout
-                // For example: Get.offAll(LoginScreen());
+
+                // Then navigate to login screen
+                Get.offAll(() => LoginScreen()); // Use () => for better practice
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryColor,

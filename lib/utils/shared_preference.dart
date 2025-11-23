@@ -25,7 +25,16 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_userImageKey);
   }
+// Add to SharedPrefsHelper
+  static Future<void> saveSponsorId(int sponsorId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('sponsorId', sponsorId);
+  }
 
+  static Future<int?> getSponsorId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('sponsorId');
+  }
   static Future<bool> removeUserImage() async {
     final prefs = await SharedPreferences.getInstance();
     return await prefs.remove(_userImageKey);

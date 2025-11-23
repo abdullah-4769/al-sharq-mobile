@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
+import '../../custom_widgets/custom_drawer.dart';
 import '../../data/response_models/speaker_response_models/speaker_sessions_detail_show_model.dart';
 import '../../images/images.dart';
 import '../../participants_view/seesion_details_view/session_detail_view.dart';
@@ -135,6 +136,7 @@ class _SpeakerConferenceDashboardScreenState extends State<SpeakerConferenceDash
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const CustomAppDrawer(),
       backgroundColor: AppColors.lightGreyColor,
       appBar: _buildAppBar(),
       body: SingleChildScrollView(

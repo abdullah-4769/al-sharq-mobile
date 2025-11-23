@@ -58,7 +58,34 @@ class NetworkApiServices extends BaseApiServices {
       rethrow;
     }
   }
+// Add this method to NetworkApiServices for context-free operations
+  Future<dynamic> getSponsorDashboardData(String url) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
 
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(Duration(seconds: 10));
+
+      debugPrint('Sponsor Dashboard API - URL: $url');
+      debugPrint('Sponsor Dashboard API - Status: ${response.statusCode}');
+      debugPrint('Sponsor Dashboard API - Response: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw HttpException('HTTP ${response.statusCode}: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Sponsor Dashboard API Error: $e');
+      rethrow;
+    }
+  }
   @override
   Future<dynamic> getPostApiServices(String url, dynamic data) async {
     try {

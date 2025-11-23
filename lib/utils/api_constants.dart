@@ -2,6 +2,12 @@ class ApiConstants {
   static const String baseUrl = "http://138.68.104.206:3000";
 
 
+  static const String sponsorBaseUrl = baseUrl;
+
+  // Sponsor Dashboard endpoints
+  static String getSponsorSessions(int sponsorId) {
+    return '$sponsorBaseUrl/sponsors/sponsor/$sponsorId/sessions';
+  }
 
   static String getConnectedUsers(int userId) {
     return '$baseUrl/connections/all?userId=$userId';
