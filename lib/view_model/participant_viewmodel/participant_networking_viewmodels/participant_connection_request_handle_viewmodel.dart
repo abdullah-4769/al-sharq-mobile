@@ -21,6 +21,8 @@ class ParticipantConnectionRequestHandleViewModel extends GetxController {
     try {
       print('=== Handling connection request: $status for ID: $requestId ===');
 
+
+
       // Set loading state for specific request and action
       isLoading.value = true;
       currentRequestId.value = requestId;
