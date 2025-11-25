@@ -4,6 +4,7 @@ import 'package:al_sharq_conference/participants_view/home_page/quick_access_ite
 import 'package:al_sharq_conference/participants_view/networking_view/networking_view.dart';
 import 'package:al_sharq_conference/participants_view/venue_map/venue_map_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:get/route_manager.dart';
 
@@ -13,6 +14,7 @@ import '../../data/response_models/participant_response_model/event_session_resp
 import '../../images/images.dart';
 import '../../view_model/participant_viewmodel/event_session_viewmodel.dart';
 import '../../view_model/participant_viewmodel/participant_profile/participant_profile_get_viewmodel.dart';
+import '../../view_model/profile_visibility_view_model.dart';
 import '../conference_schedule_view/conference_schedule_view.dart';
 import '../faq_view/faq_view.dart';
 import '../forum_chat/forum_chat.dart';
@@ -37,7 +39,9 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin {
   final EventSessionsViewModel _sessionsViewModel = Get.put(EventSessionsViewModel());
   late AnimationController _animationController;
+  late ProfileVisibilityViewModel _profileVisibilityViewModel = Get.put(ProfileVisibilityViewModel());
 
+  bool isVisible = false;
 
 
   @override
@@ -51,6 +55,8 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     // Load sessions data
     _loadSessions();
     _loadProfile();
+    _profileVisibilityViewModel = Get.put(ProfileVisibilityViewModel());
+
   }
 
   void _loadSessions() {
@@ -382,6 +388,10 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                     iconColor: Colors.grey.shade700,
                   ),
                 ),
+                SizedBox(height: 10.h,),
+                _buildProfileVisibilityItem(_profileVisibilityViewModel),
+
+
                 // const SizedBox(height: 12),
                 // InkWell(
                 //   onTap: (){
@@ -749,7 +759,76 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
       },
     );
   }
-
+  Widget _buildProfileVisibilityItem(ProfileVisibilityViewModel viewModel) {
+    return Obx(
+          () => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.visibility,
+                color: AppColors.primaryColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    text: 'Profile Visibility',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  const SizedBox(height: 2),
+                  AppText(
+                    text: viewModel.isVisible.value
+                        ? 'Your profile is visible'
+                        : 'Your profile is hidden',
+                    fontSize: 11,
+                    color: AppColors.darkgrey,
+                  ),
+                ],
+              ),
+            ),
+            Transform.scale(
+              scale: 0.8,
+              child: Switch(
+                value: viewModel.isVisible.value,
+                onChanged: (value) {
+                  viewModel.updateProfileVisibility(value);
+                },
+                activeColor: AppColors.primaryColor,
+                activeTrackColor: AppColors.primaryColor.withOpacity(0.4),
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: Colors.grey.withOpacity(0.4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   Widget _buildUpcomingIndicator() {
     return Container(
       width: 24,

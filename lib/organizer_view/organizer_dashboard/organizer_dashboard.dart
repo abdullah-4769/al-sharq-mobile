@@ -11,6 +11,7 @@ import 'package:al_sharq_conference/images/images.dart';
 import '../../data/response_models/organizer_response_models/organizer_dashboard_small_detail_show_model.dart';
 import '../../view_model/organizer_viewmodels/organizer_dashboard_small_detail_show_viewmodel.dart';
 import '../../view_model/participant_viewmodel/participant_profile/participant_profile_get_viewmodel.dart';
+import '../../view_model/profile_visibility_view_model.dart';
 import '../manage_announcement/manage_announcement.dart';
 import '../manage_exhibitors/organizer_manage_exhibitors_screen.dart';
 import '../manage_participants/manage_participants_view.dart';
@@ -34,6 +35,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   final OrganizerDashboardSmallDetailShowViewModel _dashboardViewModel =
   Get.put(OrganizerDashboardSmallDetailShowViewModel());
   final ParticipantProfileGetViewModel _profileViewModel = Get.put(ParticipantProfileGetViewModel());
+  late ProfileVisibilityViewModel _profileVisibilityViewModel;
 
   bool _isFirstBuild = true;
 
@@ -43,6 +45,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     // Fetch profile data when dashboard loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshData();
+      _profileVisibilityViewModel = Get.put(ProfileVisibilityViewModel());
+
     });
   }
 
@@ -412,6 +416,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                     Get.to(() => QRScannerScreen());
                   },
                   child: _buildToolCard(Icons.qr_code, 'QR Scanner', 'Manage check-ins', Colors.grey)),
+              _buildProfileVisibilityItem(_profileVisibilityViewModel),
+              const SizedBox(height: 10),
+
               InkWell(
                   onTap: (){
                     Get.to(() => ReportScreen());
@@ -656,6 +663,76 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           ),
           const Icon(Icons.chevron_right, color: AppColors.darkgrey),
         ],
+      ),
+    );
+  }
+  Widget _buildProfileVisibilityItem(ProfileVisibilityViewModel viewModel) {
+    return Obx(
+          () => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 3,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.visibility,
+                color: AppColors.primaryColor,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    text: 'Profile Visibility',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  const SizedBox(height: 2),
+                  AppText(
+                    text: viewModel.isVisible.value
+                        ? 'Your profile is visible'
+                        : 'Your profile is hidden',
+                    fontSize: 11,
+                    color: AppColors.darkgrey,
+                  ),
+                ],
+              ),
+            ),
+            Transform.scale(
+              scale: 0.8,
+              child: Switch(
+                value: viewModel.isVisible.value,
+                onChanged: (value) {
+                  viewModel.updateProfileVisibility(value);
+                },
+                activeColor: AppColors.primaryColor,
+                activeTrackColor: AppColors.primaryColor.withOpacity(0.4),
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: Colors.grey.withOpacity(0.4),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

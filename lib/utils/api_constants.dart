@@ -47,4 +47,19 @@ class ApiConstants {
 
   // Event Sessions API
   static String getEventSessions(int eventId) => "$baseUrl/event/event-sessions/$eventId";
+  //............... Profile Visibility .....................//
+  static String getProfileVisibility(int userId, int eventId) {
+    return '$baseUrl/participant-directory-opt-in-out/$eventId/$userId';
+  }
+
+  static const String updateProfileVisibility = '$baseUrl/participant-directory-opt-in-out';
+
+
+  // ------------------ Exhibitor Section ---------------------- //
+
+  static String getExhibitorSessionsDashboard(int exhibitorId) {
+    return '$baseUrl/exhibiteros/$exhibitorId/sessions';
+  }
+
+
 }

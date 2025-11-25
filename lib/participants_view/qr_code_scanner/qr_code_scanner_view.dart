@@ -6,8 +6,6 @@ import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
 
-
-
 class QRPassScreen extends StatefulWidget {
   const QRPassScreen({super.key});
 
