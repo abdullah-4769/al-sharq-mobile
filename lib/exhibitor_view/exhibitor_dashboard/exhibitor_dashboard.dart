@@ -288,6 +288,7 @@ class _ExhibitorDashboardScreenState extends State<ExhibitorDashboardScreen> {
         );
       }
 
+
       return Column(
         children: [
           // Today's Sessions
