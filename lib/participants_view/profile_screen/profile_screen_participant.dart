@@ -72,6 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     currentEmail: _profileViewModel.profile!.email,
                     currentOrganization: _profileViewModel.profile!.organization,
                     currentImageUrl: _profileViewModel.profile!.file,
+                    currentBio: _profileViewModel.profile!.bio,
                   ));
                 }
               },
@@ -323,7 +324,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
 
             const SizedBox(height: 32),
-
+            // Bio Section - ADD THIS NEW SECTION
+            const AppText(
+              text: 'Bio',
+              fontSize: 12,
+              color: AppColors.darkgrey,
+              fontWeight: FontWeight.w500,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: AppText(
+                text: profile.bio?.isNotEmpty == true ? profile.bio! : 'No bio added yet',
+                fontSize: 14,
+                color: profile.bio?.isNotEmpty == true ? Colors.black87 : AppColors.darkgrey,
+               // fontStyle: profile.bio?.isNotEmpty == true ? FontStyle.normal : FontStyle.italic,
+              ),
+            ),
             // Switch to Speaker Button (only show if user has speaker ID)
             // FutureBuilder<bool>(
             //   future: _loginViewModel.canSwitchToSpeaker(),

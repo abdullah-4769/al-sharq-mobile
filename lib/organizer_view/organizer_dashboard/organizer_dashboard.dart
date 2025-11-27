@@ -8,6 +8,7 @@ import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:al_sharq_conference/custom_widgets/app_text.dart';
 import 'package:al_sharq_conference/custom_widgets/custom_text_field.dart';
 import 'package:al_sharq_conference/images/images.dart';
+import '../../dashboard_screen.dart';
 import '../../data/response_models/organizer_response_models/organizer_dashboard_small_detail_show_model.dart';
 import '../../view_model/organizer_viewmodels/organizer_dashboard_small_detail_show_viewmodel.dart';
 import '../../view_model/participant_viewmodel/participant_profile/participant_profile_get_viewmodel.dart';
@@ -419,11 +420,19 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               _buildProfileVisibilityItem(_profileVisibilityViewModel),
               const SizedBox(height: 10),
 
+              // InkWell(
+              //     onTap: (){
+              //       Get.to(() => ReportScreen());
+              //     },
+              //     child: _buildToolCard(Icons.report, 'Reports', 'Generate reports', Colors.teal)),
+
               InkWell(
                   onTap: (){
-                    Get.to(() => ReportScreen());
+                    Get.to(() => OrganizerDashboardScreen());
                   },
                   child: _buildToolCard(Icons.report, 'Reports', 'Generate reports', Colors.teal)),
+
+
               InkWell(
                   onTap: (){
                     Get.to(() => ManageFAQsScreen());
@@ -456,32 +465,32 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
               const SizedBox(height: 16),
 
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.whiteColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.download, color: AppColors.primaryColor),
-                    const SizedBox(width: 8),
-                    const AppText(
-                      text: 'Export Report',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                    const Spacer(),
-                    const AppText(
-                      text: 'Download CSV',
-                      fontSize: 12,
-                      color: AppColors.darkgrey,
-                    ),
-                  ],
-                ),
-              ),
+              // Container(
+              //   width: double.infinity,
+              //   padding: const EdgeInsets.all(12),
+              //   decoration: BoxDecoration(
+              //     color: AppColors.whiteColor,
+              //     borderRadius: BorderRadius.circular(8),
+              //   ),
+              //   child: Row(
+              //     children: [
+              //       Icon(Icons.download, color: AppColors.primaryColor),
+              //       const SizedBox(width: 8),
+              //       const AppText(
+              //         text: 'Export Report',
+              //         fontSize: 14,
+              //         fontWeight: FontWeight.w500,
+              //         color: Colors.black,
+              //       ),
+              //       const Spacer(),
+              //       // const AppText(
+              //       //   text: 'Download CSV',
+              //       //   fontSize: 12,
+              //       //   color: AppColors.darkgrey,
+              //       // ),
+              //     ],
+              //   ),
+              // ),
             ],
           ),
         );

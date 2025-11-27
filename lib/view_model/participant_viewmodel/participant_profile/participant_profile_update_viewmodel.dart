@@ -1,7 +1,6 @@
 import 'package:get/get.dart';
 import '../../../repository/participants_repository/participant_profile/participant_profile_update_repo.dart';
 
-
 class ParticipantProfileUpdateViewModel extends GetxController {
   final ParticipantProfileUpdateRepository _repository = ParticipantProfileUpdateRepository();
 
@@ -18,6 +17,7 @@ class ParticipantProfileUpdateViewModel extends GetxController {
     required String email,
     required String organization,
     String? filePath,
+    String? bio, // Added bio parameter
   }) async {
     _isLoading.value = true;
     _error.value = '';
@@ -30,6 +30,7 @@ class ParticipantProfileUpdateViewModel extends GetxController {
         email: email,
         organization: organization,
         filePath: filePath,
+        bio: bio, // Pass bio to repository
       );
 
       _successMessage.value = response.message;

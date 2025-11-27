@@ -1,3 +1,5 @@
+import '../../login_response_model.dart';
+
 class ParticipantProfileGetModel {
   final int id;
   final String email;
@@ -7,6 +9,7 @@ class ParticipantProfileGetModel {
   final String role;
   final String organization;
   final String? photo;
+  final String? bio; // Added bio field
   final bool isBlocked;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -20,6 +23,7 @@ class ParticipantProfileGetModel {
     required this.role,
     required this.organization,
     this.photo,
+    this.bio, // Added bio field
     required this.isBlocked,
     required this.createdAt,
     required this.updatedAt,
@@ -35,6 +39,7 @@ class ParticipantProfileGetModel {
       role: json['role'] ?? 'participant',
       organization: json['organization'] ?? '',
       photo: json['photo'],
+      bio: json['bio'], // Added bio field
       isBlocked: json['isBlocked'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
@@ -55,21 +60,22 @@ class ParticipantProfileGetModel {
       'role': role,
       'organization': organization,
       'photo': photo,
+      'bio': bio, // Added bio field
       'isBlocked': isBlocked,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
 }
-
+// You can now remove ParticipantProfileGetModel and use UserModel instead
 class ParticipantProfileGetResponse {
-  final ParticipantProfileGetModel user;
+  final UserModel user;
 
   ParticipantProfileGetResponse({required this.user});
 
   factory ParticipantProfileGetResponse.fromJson(Map<String, dynamic> json) {
     return ParticipantProfileGetResponse(
-      user: ParticipantProfileGetModel.fromJson(json),
+      user: UserModel.fromJson(json),
     );
   }
 }

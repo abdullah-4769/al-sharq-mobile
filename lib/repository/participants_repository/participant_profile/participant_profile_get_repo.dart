@@ -45,7 +45,6 @@ class ParticipantProfileGetRepository {
       rethrow;
     }
   }
-
   void _validateResponseData(Map<String, dynamic> data) {
     final requiredFields = ['id', 'email', 'name', 'role', 'organization'];
 

@@ -12,10 +12,25 @@ class SharedPrefsHelper {
   static const String keyRememberMe = 'remember_me';
   static const String keyLatestEventId = 'latest_event_id';
   static const String keySpeakerId = 'speaker_id';
+static const String keyUserBio = 'user_bio';
 
   // Add these new methods for user image
   static const String _userImageKey = 'user_image';
 
+
+  static Future<void> saveUserBio(String? bio) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (bio != null) {
+      await prefs.setString('user_bio', bio);
+    } else {
+      await prefs.remove('user_bio');
+    }
+  }
+
+  static Future<String?> getUserBio() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('user_bio');
+  }
   static Future<bool> setUserImage(String imageUrl) async {
     final prefs = await SharedPreferences.getInstance();
     return await prefs.setString(_userImageKey, imageUrl);
@@ -83,8 +98,24 @@ class SharedPrefsHelper {
     }
   }
 
-  static Future<void> saveLatestEventId(int latestEventId) async {
-    await _saveInt(keyLatestEventId, latestEventId);
+  static Future<void> saveLatestEventId(String? latestEventId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (latestEventId != null && latestEventId.isNotEmpty) {
+      // Convert string to int before saving
+      final eventId = int.tryParse(latestEventId);
+      if (eventId != null) {
+        await prefs.setInt('latest_event_id', eventId);
+      } else {
+        await prefs.remove('latest_event_id');
+      }
+    } else {
+      await prefs.remove('latest_event_id');
+    }
+  }
+
+  static Future<int?> getLatestEventId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('latest_event_id');
   }
 
   static Future<void> saveRememberMe(bool rememberMe) async {
@@ -124,9 +155,7 @@ class SharedPrefsHelper {
     return await _getString(keyUserPhoto);
   }
 
-  static Future<int?> getLatestEventId() async {
-    return await _getInt(keyLatestEventId);
-  }
+
 
   static Future<bool?> getRememberMe() async {
     return await _getBool(keyRememberMe);
@@ -175,6 +204,7 @@ class SharedPrefsHelper {
       'latestEventId': await getLatestEventId(),
       'authToken': await getAuthToken(),
       'rememberMe': await getRememberMe() ?? false,
+      'bio':await getUserBio(), // Add this line
       'speakerId': await getSpeakerId(),
       'userImage': await getUserImage(),
     };

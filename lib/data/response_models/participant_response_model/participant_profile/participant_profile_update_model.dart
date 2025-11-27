@@ -3,12 +3,14 @@ class ParticipantProfileUpdateModel {
   final String email;
   final String organization;
   final String? file;
+  final String? bio; // Added bio field
 
   ParticipantProfileUpdateModel({
     required this.name,
     required this.email,
     required this.organization,
     this.file,
+    this.bio, // Added bio field
   });
 
   Map<String, dynamic> toJson() {
@@ -17,10 +19,10 @@ class ParticipantProfileUpdateModel {
       'email': email,
       'organization': organization,
       if (file != null) 'file': file,
+      if (bio != null) 'bio': bio, // Added bio field
     };
   }
 }
-
 class ParticipantProfileUpdateResponse {
   final String message;
   final UpdatedUser user;

@@ -12,6 +12,7 @@ class EditProfileScreen extends StatefulWidget {
   final String currentEmail;
   final String currentOrganization;
   final String? currentImageUrl;
+  final String? currentBio; // ADD THIS
 
   const EditProfileScreen({
     super.key,
@@ -19,6 +20,7 @@ class EditProfileScreen extends StatefulWidget {
     required this.currentEmail,
     required this.currentOrganization,
     this.currentImageUrl,
+    this.currentBio, // ADD THIS
   });
 
   @override
@@ -30,7 +32,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _organizationController;
-
+  late TextEditingController _bioController; // ADD THIS
   final ParticipantProfileUpdateViewModel _updateViewModel = Get.put(ParticipantProfileUpdateViewModel());
   final ParticipantProfileGetViewModel _profileViewModel = Get.find<ParticipantProfileGetViewModel>();
 
@@ -44,6 +46,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController = TextEditingController(text: widget.currentName);
     _emailController = TextEditingController(text: widget.currentEmail);
     _organizationController = TextEditingController(text: widget.currentOrganization);
+    _bioController = TextEditingController(text: widget.currentBio ?? ''); // ADD THIS
   }
 
   @override
@@ -51,6 +54,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _organizationController.dispose();
+    _bioController.dispose(); // ADD THIS
     super.dispose();
   }
 
@@ -118,6 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         email: _emailController.text.trim(),
         organization: _organizationController.text.trim(),
         filePath: _imagePath,
+        bio: _bioController.text.trim(), // ADD THIS
       );
 
       if (success) {
@@ -293,7 +298,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
 
               const SizedBox(height: 40),
-
+              // Bio Field - ADD THIS NEW SECTION
+              _buildFormField(
+                label: 'Bio',
+                controller: _bioController,
+                //maxLines: 4, // ADD THIS for multi-line bio
+                validator: (value) {
+                  // Bio can be optional, so no validation needed
+                  return null;
+                },
+              ),
+              const SizedBox(height: 40),
               // Save Button
               Obx(() {
                 return SizedBox(
@@ -339,6 +354,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required String label,
     required TextEditingController controller,
     required String? Function(String?) validator,
+    int maxLines = 1, // ADD THIS parameter
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,6 +369,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         TextFormField(
           controller: controller,
           validator: validator,
+          maxLines: maxLines, // ADD THIS
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.grey[50],
