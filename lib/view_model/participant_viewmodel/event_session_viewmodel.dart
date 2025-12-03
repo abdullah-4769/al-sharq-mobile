@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../data/response/api_response.dart';
 import '../../data/response_models/participant_response_model/event_session_response_model.dart';
+import '../../data/response_models/participant_response_model/session_model.dart';
 import '../../repository/participants_repository/event_session_repository.dart';
 import '../../utils/shared_preference.dart';
 

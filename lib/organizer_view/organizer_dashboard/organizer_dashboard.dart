@@ -13,6 +13,7 @@ import '../../data/response_models/organizer_response_models/organizer_dashboard
 import '../../view_model/organizer_viewmodels/organizer_dashboard_small_detail_show_viewmodel.dart';
 import '../../view_model/participant_viewmodel/participant_profile/participant_profile_get_viewmodel.dart';
 import '../../view_model/profile_visibility_view_model.dart';
+import '../import_csv/import_participants_screen.dart';
 import '../manage_announcement/manage_announcement.dart';
 import '../manage_exhibitors/organizer_manage_exhibitors_screen.dart';
 import '../manage_participants/manage_participants_view.dart';
@@ -23,6 +24,7 @@ import '../manager_sponser/manage_sponser.dart';
 import '../organizer_venue_map/organizer_venue_map.dart';
 import '../report_view/report_view.dart';
 import '../qrcode_scanner/qrcode_scanner.dart';
+import '../teammember_part/registration_team_members_screen.dart';
 
 class OrganizerDashboard extends StatefulWidget {
   const OrganizerDashboard({super.key});
@@ -37,14 +39,16 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   Get.put(OrganizerDashboardSmallDetailShowViewModel());
   final ParticipantProfileGetViewModel _profileViewModel = Get.put(ParticipantProfileGetViewModel());
   late ProfileVisibilityViewModel _profileVisibilityViewModel;
-
+  final TextEditingController _searchController = TextEditingController();
   bool _isFirstBuild = true;
 
   @override
   void initState() {
     super.initState();
+
     // Fetch profile data when dashboard loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
+
       _refreshData();
       _profileVisibilityViewModel = Get.put(ProfileVisibilityViewModel());
 
@@ -239,13 +243,13 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Bar
-              CustomTextField(
-                hintText: 'Search',
-                controller: searchController,
-                suffixIcon: Icons.tune,
-                suffixIconColor: AppColors.primaryColor,
-              ),
+              // // Search Bar
+              // CustomTextField(
+              //   hintText: 'Search',
+              //   controller: searchController,
+              //   suffixIcon: Icons.tune,
+              //   suffixIconColor: AppColors.primaryColor,
+              // ),
 
               const SizedBox(height: 20),
 
@@ -397,7 +401,10 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
                         Get.to(() => OrganizerManageExhibitorsScreen());
                       },
                       child: _buildQuickAccessCard('Exhibitors', Icons.shower_sharp, Colors.red))),
-
+                  const SizedBox(width: 12),
+                  Expanded(child: InkWell(
+                      onTap: () => Get.to(() => RegistrationTeamScreen()),
+                      child: _buildQuickAccessCard('Team Member', Icons.people_outline, Colors.blueGrey))),
                 ],
               ),
 
@@ -420,11 +427,11 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               _buildProfileVisibilityItem(_profileVisibilityViewModel),
               const SizedBox(height: 10),
 
-              // InkWell(
-              //     onTap: (){
-              //       Get.to(() => ReportScreen());
-              //     },
-              //     child: _buildToolCard(Icons.report, 'Reports', 'Generate reports', Colors.teal)),
+              InkWell(
+                  onTap: (){
+                    Get.to(() => ImportParticipantsScreen());
+                  },
+                  child: _buildToolCard(Icons.import_contacts , 'Import Participant', 'Import participants from CSV', Colors.teal)),
 
               InkWell(
                   onTap: (){
@@ -441,29 +448,11 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
               const SizedBox(height: 20),
 
-              // Recent Participants
-              _buildSectionHeader(
-                'Recent Participants',
-                'View All',
-                onTap: () {
-                  Get.to(() => ViewAllParticipantsScreen());
-                },
-              ),
+              // Recent Participants Section with Search
+              _buildRecentParticipantsSection(),
               const SizedBox(height: 12),
 
-              // Display recent users from API
-              if (_dashboardViewModel.recentUsers.isNotEmpty)
-                ..._dashboardViewModel.recentUsers.map((user) =>
-                    _buildParticipantCard(user)
-                ).toList()
-              else
-                const AppText(
-                  text: 'No recent participants',
-                  fontSize: 14,
-                  color: AppColors.darkgrey,
-                ),
 
-              const SizedBox(height: 16),
 
               // Container(
               //   width: double.infinity,
@@ -497,7 +486,142 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
       }),
     );
   }
+  Widget _buildRecentParticipantsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header with View All button
+        _buildSectionHeader(
+          'Recent Participants',
+          'View All',
+          onTap: () {
+            Get.to(() => ViewAllParticipantsScreen());
+          },
+        ),
 
+        const SizedBox(height: 12),
+
+        // Search Bar for Participants
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.search, color: Colors.grey, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchController, // ADD CONTROLLER
+                  onChanged: (value) {
+                    setState(() {});
+                  },
+                  decoration: const InputDecoration(
+                    hintText: 'Search participants by name, email, organization...',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(fontSize: 12),
+                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Display participants based on search or first 4
+        Obx(() {
+          final searchQuery = _searchController.text;
+          List<OrganizerDashboardSmallDetailShowRecentUser> usersToDisplay;
+
+          if (searchQuery.isNotEmpty) {
+            // Search from all users
+            usersToDisplay = _dashboardViewModel.searchUsers(searchQuery);
+          } else {
+            // Show only first 4 users
+            usersToDisplay = _dashboardViewModel.displayedRecentUsers;
+          }
+
+          if (usersToDisplay.isEmpty) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Center(
+                child: AppText(
+                  text: 'No participants found',
+                  fontSize: 14,
+                  color: AppColors.darkgrey,
+                ),
+              ),
+            );
+          }
+
+          return Column(
+            children: [
+              // Show search results count if searching
+              if (searchQuery.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      AppText(
+                        text: 'Search Results: ${usersToDisplay.length} found',
+                        fontSize: 12,
+                        color: AppColors.darkgrey,
+                      ),
+                      if (usersToDisplay.length > 4)
+                        AppText(
+                          text: 'Showing ${usersToDisplay.length} participants',
+                          fontSize: 10,
+                          color: AppColors.primaryColor,
+                        ),
+                    ],
+                  ),
+                ),
+
+              // Show participants
+              ...usersToDisplay.map((user) =>
+                  _buildParticipantCard(user)
+              ).toList(),
+
+              // Show "View All" button if there are more than 4 users and not searching
+              if (searchQuery.isEmpty && _dashboardViewModel.totalRecentUsersCount > 4)
+                Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  width: double.infinity,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Get.to(() => ViewAllParticipantsScreen());
+                    },
+                    icon: const Icon(Icons.arrow_forward, size: 16),
+                    label: const AppText(
+                      text: 'View All Participants',
+                      fontSize: 12,
+                      color: AppColors.primaryColor,
+                    ),
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppColors.primaryColor.withOpacity(0.1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        }),
+      ],
+    );
+  }
   Widget _buildDefaultAvatar() {
     return Container(
       decoration: const BoxDecoration(
@@ -801,6 +925,8 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
   @override
   void dispose() {
+    _searchController.dispose();
+
     searchController.dispose();
     super.dispose();
   }

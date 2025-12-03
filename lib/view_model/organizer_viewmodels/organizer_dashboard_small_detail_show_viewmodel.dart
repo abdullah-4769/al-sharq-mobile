@@ -9,7 +9,30 @@ class OrganizerDashboardSmallDetailShowViewModel extends GetxController {
   var dashboardData = Rx<OrganizerDashboardSmallDetailShowModel?>(null);
   var isLoading = false.obs;
   var error = ''.obs;
+// Add these methods to your OrganizerDashboardSmallDetailShowViewModel class
+  List<OrganizerDashboardSmallDetailShowRecentUser> get displayedRecentUsers {
+    final allUsers = dashboardData.value?.recentUsers ?? [];
+    // Return only first 4 users for display
+    return allUsers.take(4).toList();
+  }
 
+  List<OrganizerDashboardSmallDetailShowRecentUser> searchUsers(String query) {
+    final allUsers = dashboardData.value?.recentUsers ?? [];
+    if (query.isEmpty) return allUsers;
+
+    return allUsers.where((user) {
+      final name = user.name.toLowerCase();
+      final email = user.email?.toLowerCase() ?? '';
+      final organization = user.organization?.toLowerCase() ?? '';
+      final searchQuery = query.toLowerCase();
+
+      return name.contains(searchQuery) ||
+          email.contains(searchQuery) ||
+          organization.contains(searchQuery);
+    }).toList();
+  }
+
+  int get totalRecentUsersCount => dashboardData.value?.recentUsers.length ?? 0;
   Future<void> fetchDashboardData() async {
     try {
       isLoading.value = true;

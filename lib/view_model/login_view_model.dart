@@ -13,9 +13,12 @@ import '../../utils/shared_preference.dart';
 import '../data/request_models/login_request_model.dart';
 import '../data/response_models/login_response_model.dart';
 import '../exhibitor_view/exhibitor_dashboard/exhibitor_dashboard.dart';
+import '../registration_team/participant_list_screen.dart';
 import '../speaker_view/manage_session_speaker/manage_session_speaker.dart';
 import 'package:get/get.dart';
 import 'package:dio/dio.dart';
+
+import '../sponser_view/manage_session/manage_session.dart';
 
 class LoginViewModel extends GetxController {
   final _repo = LoginRepository();
@@ -134,10 +137,14 @@ class LoginViewModel extends GetxController {
         Get.offAll(() => ExhibitorDashboardScreen(exhibitorId: 5,));
         break;
       case 'sponsor':
-        Get.offAll(() => OrganizerManageSessionsScreen());
+        Get.offAll(() => SponserDashboardScreen());
         break;
       case 'organizer':
         Get.offAll(() => OrganizerDashboard());
+        break;
+
+      case 'registrationteam': // Add this case
+        Get.offAll(() => const ParticipantListScreen());
         break;
       default:
         Get.offAllNamed('/home');

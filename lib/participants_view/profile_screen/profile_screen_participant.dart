@@ -272,28 +272,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Organization
-                  const AppText(
-                    text: 'Organization',
-                    fontSize: 12,
-                    color: AppColors.darkgrey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: AppText(
-                      text: profile.organization,
-                      fontSize: 14,
-                      color: Colors.black87,
-                    ),
-                  ),
+                  // // Organization
+                  // const AppText(
+                  //   text: 'Organization',
+                  //   fontSize: 12,
+                  //   color: AppColors.darkgrey,
+                  //   fontWeight: FontWeight.w500,
+                  // ),
+                  // const SizedBox(height: 8),
+                  // Container(
+                  //   width: double.infinity,
+                  //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  //   decoration: BoxDecoration(
+                  //     color: Colors.grey[50],
+                  //     borderRadius: BorderRadius.circular(8),
+                  //     border: Border.all(color: Colors.grey[300]!),
+                  //   ),
+                  //   child: AppText(
+                  //     text: profile.organization,
+                  //     fontSize: 14,
+                  //     color: Colors.black87,
+                  //   ),
+                  // ),
 
                   const SizedBox(height: 20),
 

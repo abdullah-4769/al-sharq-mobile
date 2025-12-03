@@ -1,10 +1,18 @@
-import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
+// qr_pass_screen.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:get/get.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
+import '../../custom_widgets/custom_drawer.dart';
+import '../../utils/shared_preference.dart';
+import '../../view_model/participant_viewmodel/participant_profile/participant_profile_get_viewmodel.dart';
+import '../../view_model/speaker_viewmodels/speaker_profile_show_on_dashboard_viewmodel.dart';
+
 
 class QRPassScreen extends StatefulWidget {
   const QRPassScreen({super.key});
@@ -15,314 +23,253 @@ class QRPassScreen extends StatefulWidget {
 
 class _QRPassScreenState extends State<QRPassScreen> {
   bool _isRefreshing = false;
+  String? _qrData;
+  Map<String, dynamic>? _displayData;
 
-  Future<void> _refreshQRCode() async {
-    setState(() {
-      _isRefreshing = true;
-    });
+  final ParticipantProfileGetViewModel _participantVM = Get.put(ParticipantProfileGetViewModel());
+  final SpeakerProfileShowOnDashboardViewModel _speakerVM = Get.put(SpeakerProfileShowOnDashboardViewModel());
 
-    await Future.delayed(Duration(seconds: 2));
+  late String _role;
+  late int _userId;
+  String? _speakerId;
 
-    setState(() {
-      _isRefreshing = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('QR Code refreshed successfully'),
-        backgroundColor: Colors.green,
-      ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    _loadUserRoleAndId().then((_) => _loadProfile());
   }
 
-  void _downloadQRCode() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('QR Code downloaded to gallery'),
-        backgroundColor: AppColors.primaryColor,
-      ),
-    );
+  Future<void> _loadUserRoleAndId() async {
+    final role = await SharedPrefsHelper.getUserRole() ?? 'participant';
+    final userId = await SharedPrefsHelper.getUserId() ?? 20;
+    final speakerId = await SharedPrefsHelper.getSpeakerId();
+
+    setState(() {
+      _role = role.toLowerCase();
+      _userId = userId;
+      _speakerId = speakerId?.toString();
+    });
+  }
+
+  Future<void> _loadProfile() async {
+    if (_role == 'participant') {
+      await _participantVM.fetchProfile();
+      if (_participantVM.profile != null) _buildQrAndDisplay(_participantVM.profile!);
+    } else if (_role == 'speaker') {
+      final speakerId = int.tryParse(_speakerId ?? '') ?? 0;
+      if (speakerId == 0) return;
+      await _speakerVM.fetchSpeakerProfile(speakerId);
+      if (_speakerVM.speakerProfile != null) _buildQrAndDisplay(_speakerVM.speakerProfile!);
+    }
+  }
+
+  void _buildQrAndDisplay(dynamic profile) {
+    // Build complete user data for QR code
+    Map<String, dynamic> qrPayload = {
+      "userId": _userId,
+      "role": _role,
+      "badge": "AS2025-$_userId",
+    };
+
+    Map<String, dynamic> displayData = {
+      "badge": "AS2025-$_userId",
+      "role": _role,
+    };
+
+    if (_role == 'speaker') {
+      // Speaker data
+      qrPayload.addAll({
+        "name": profile.user.name,
+        "email": profile.user.email,
+        "phone": profile.user.phone ?? '',
+        "photo": profile.user.file ?? '',
+        "organization": profile.country,
+        "bio": profile.bio,
+        "expertise": profile.expertise.join(', '),
+        "designations": profile.designations.join(', '),
+        "website": profile.website ?? '',
+        "linkedin": profile.linkedin ?? '',
+        "twitter": profile.twitter ?? '',
+        "facebook": profile.facebook ?? '',
+        "youtube": profile.youtube ?? '',
+      });
+
+      displayData.addAll({
+        "name": profile.user.name,
+        "email": profile.user.email,
+        "phone": profile.user.phone ?? '',
+        "photo": profile.user.file ?? '',
+        "organization": profile.country,
+        "bio": profile.bio,
+        "expertise": profile.expertise.join(', '),
+        "designations": profile.designations.join(', '),
+        "website": profile.website ?? '',
+        "linkedin": profile.linkedin ?? '',
+        "twitter": profile.twitter ?? '',
+        "facebook": profile.facebook ?? '',
+        "youtube": profile.youtube ?? '',
+      });
+    } else {
+      // Participant data
+      qrPayload.addAll({
+        "name": profile.name,
+        "email": profile.email,
+        "phone": profile.phone ?? '',
+        "photo": profile.photo ?? profile.file ?? '',
+        "organization": profile.organization,
+      });
+
+      displayData.addAll({
+        "name": profile.name,
+        "email": profile.email,
+        "phone": profile.phone ?? '',
+        "photo": profile.photo ?? profile.file ?? '',
+        "organization": profile.organization,
+      });
+    }
+
+    setState(() {
+      _qrData = jsonEncode(qrPayload);
+      _displayData = displayData;
+    });
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _isRefreshing = true);
+    await _loadProfile();
+    setState(() => _isRefreshing = false);
+    Get.snackbar('Success', 'QR refreshed', backgroundColor: Colors.green);
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final isTablet = screenSize.width > 600;
+    final size = MediaQuery.of(context).size;
+    final isTablet = size.width > 600;
 
     return Scaffold(
-      drawer: CustomAppDrawer(),
+      drawer: const CustomAppDrawer(),
       backgroundColor: AppColors.lightGreyColor,
       appBar: AppBar(
         backgroundColor: AppColors.whiteColor,
-
-        title: AppText(
-          text: 'My QR Pass',
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          color: AppColors.blackColor,
-        ),
+        title: const AppText(text: 'My QR Pass', fontSize: 18, fontWeight: FontWeight.w600),
         centerTitle: true,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Main QR Card
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: AppColors.whiteColor,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Profile Image
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.mediumGreyColor,
-                        image: DecorationImage(
-                          image: NetworkImage(
-                            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-                          ),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 16),
-
-                    // Name and Details
-                    AppText(
-                      text: 'Dr. Johnathan',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.blackColor,
-                    ),
-                    SizedBox(height: 4),
-                    AppText(
-                      text: 'Al Sharq University',
-                      fontSize: 16,
-                      color: AppColors.darkgrey,
-                    ),
-                    SizedBox(height: 4),
-                    AppText(
-                      text: 'Attendee',
-                      fontSize: 14,
-                      color: AppColors.darkgrey,
-                    ),
-                    SizedBox(height: 24),
-
-                    // QR Code
-                    Container(
-                      width: isTablet ? 200 : 180,
-                      height: isTablet ? 200 : 180,
-                      decoration: BoxDecoration(
-                        color: AppColors.whiteColor,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.mediumGreyColor,
-                          width: 1,
-                        ),
-                      ),
-                      child: _isRefreshing
-                          ? Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.primaryColor,
-                        ),
-                      )
-                          : _buildQRCodePattern(),
-                    ),
-                    SizedBox(height: 16),
-
-                    // QR Instructions
-                    AppText(
-                      text: 'Show this QR code at check-in',
-                      fontSize: 14,
-                      color: AppColors.darkgrey,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+      body: _qrData == null
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // QR Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.whiteColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                ],
               ),
-
-              SizedBox(height: 24),
-
-              // Details Card
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.whiteColor,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundImage: NetworkImage(_displayData?['photo'] ?? 'https://via.placeholder.com/150'),
+                  ),
+                  const SizedBox(height: 16),
+                  AppText(text: _displayData?['name'] ?? '', fontSize: 20, fontWeight: FontWeight.w600),
+                  const SizedBox(height: 4),
+                  AppText(text: _displayData?['organization'] ?? '', fontSize: 16, color: AppColors.darkgrey),
+                  const SizedBox(height: 4),
+                  AppText(text: (_displayData?['role'] ?? '').toString().toUpperCase(), fontSize: 14, color: AppColors.darkgrey),
+                  if (_role == 'speaker') ...[
+                    const SizedBox(height: 8),
+                    AppText(text: 'Expertise: ${_displayData?['expertise'] ?? ''}', fontSize: 13, color: AppColors.darkgrey),
                   ],
-                ),
-                child: Column(
-                  children: [
-                    // Status Row
-                    _buildDetailRow(
-                      'Status',
-                      '',
-                      trailing: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: AppText(
-                          text: 'Active',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green,
-                        ),
-                      ),
+                  const SizedBox(height: 24),
+
+                  // QR Code
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.mediumGreyColor),
                     ),
+                    child: _isRefreshing
+                        ? const CircularProgressIndicator()
+                        : QrImageView(
+                      data: _qrData!,
+                      size: isTablet ? 220 : 180,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const AppText(text: 'Show this QR code at check-in', fontSize: 14, color: AppColors.darkgrey),
+                ],
+              ),
+            ),
 
-                    Divider(color: AppColors.lightGreyColor, height: 24),
+            const SizedBox(height: 24),
 
-                    // Badge ID
-                    _buildDetailRow('Badge ID', 'AS2025-1034'),
-
-                    Divider(color: AppColors.lightGreyColor, height: 24),
-
-                    // Role
-                    _buildDetailRow('Role / Designation', 'Attendee - Al Sharq University'),
-
-                    Divider(color: AppColors.lightGreyColor, height: 24),
-
-                    // Location
-                    _buildDetailRow('Location', 'Doha, Qatar'),
+            // Details Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.whiteColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+              ),
+              child: Column(
+                children: [
+                  _row('Badge ID', _displayData?['badge'] ?? ''),
+                  const Divider(),
+                  _row('Role', _displayData?['role']?.toString().toUpperCase() ?? ''),
+                  const Divider(),
+                  _row('Organization / Country', _displayData?['organization'] ?? ''),
+                  if (_role == 'speaker') ...[
+                    const Divider(),
+                    _row('Bio', _displayData?['bio'] ?? ''),
+                    if ((_displayData?['linkedin'] ?? '').isNotEmpty) ...[
+                      const Divider(),
+                      _row('LinkedIn', _displayData?['linkedin'] ?? ''),
+                    ],
                   ],
-                ),
+                ],
               ),
+            ),
 
-              SizedBox(height: 24),
-
-              // Action Buttons
-              CustomButton(
-                text: 'Download QR Code',
-              //  icon: Icons.download,
-                onPressed: _downloadQRCode,
-                backgroundColor: AppColors.primaryColor,
-                height: 50,
-              ),
-
-              SizedBox(height: 12),
-
-              CustomButton(
-                text: 'Refresh QR Code',
-              //  icon: Icons.refresh,
-                onPressed: _refreshQRCode,
-              //  isOutlined: true,
-                isLoading: _isRefreshing,
-                height: 50,
-              ),
-
-              SizedBox(height: 32),
-            ],
-          ),
+            const SizedBox(height: 30),
+            CustomButton(text: 'Refresh QR', onPressed: _refresh, isLoading: _isRefreshing),
+            const SizedBox(height: 12),
+            CustomButton(text: 'Download QR', onPressed: () {/* add screenshot logic later */}, backgroundColor: AppColors.primaryColor),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {Widget? trailing}) {
-    return Row(
+  Widget _row(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           flex: 2,
+          child: AppText(text: label, fontSize: 14, color: AppColors.darkgrey),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 3,
           child: AppText(
-            text: label,
+            text: value,
             fontSize: 14,
-            color: AppColors.darkgrey,
+            fontWeight: FontWeight.w600,
+            textAlign: TextAlign.end,
           ),
         ),
-        SizedBox(width: 16),
-        trailing ??
-            Expanded(
-              flex: 3,
-              child: AppText(
-                text: value,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.blackColor,
-                textAlign: TextAlign.end,
-              ),
-            ),
       ],
-    );
-  }
-
-  Widget _buildQRCodePattern() {
-    // Simulated QR code pattern using containers
-    return Padding(
-      padding: EdgeInsets.all(16),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 21,
-          crossAxisSpacing: 1,
-          mainAxisSpacing: 1,
-        ),
-        itemCount: 441, // 21x21 grid
-        itemBuilder: (context, index) {
-          // Create a pattern that looks like a QR code
-          bool shouldFill = _getQRPattern(index);
-
-          return Container(
-            decoration: BoxDecoration(
-              color: shouldFill ? AppColors.blackColor : AppColors.whiteColor,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  bool _getQRPattern(int index) {
-    // This creates a simplified QR-like pattern
-    int row = index ~/ 21;
-    int col = index % 21;
-
-    // Corner squares (position detection patterns)
-    if ((row < 7 && col < 7) ||
-        (row < 7 && col > 13) ||
-        (row > 13 && col < 7)) {
-      return _isInCornerPattern(row % 7, col % 7);
-    }
-
-    // Timing patterns
-    if (row == 6 || col == 6) {
-      return (row + col) % 2 == 0;
-    }
-
-    // Random pattern for data area
-    return (row * col + row + col) % 3 == 0;
-  }
-
-  bool _isInCornerPattern(int row, int col) {
-    // 7x7 corner pattern
-    if (row == 0 || row == 6 || col == 0 || col == 6) return true;
-    if (row >= 2 && row <= 4 && col >= 2 && col <= 4) return true;
-    return false;
-  }
+    ),
+  );
 }

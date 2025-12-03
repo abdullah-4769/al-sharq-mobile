@@ -92,6 +92,7 @@
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../../images/images.dart';
+import '../auth/login_view.dart';
 import '../auth/signup_view.dart';
 
 class SplashView extends StatefulWidget {
@@ -113,7 +114,7 @@ class _SplashViewState extends State<SplashView> {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const SignupScreen()),
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
   }

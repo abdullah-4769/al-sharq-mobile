@@ -1,186 +1,273 @@
-import 'package:al_sharq_conference/participants_view/auth/reset_password_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import '../../app_colors/app_colors.dart';
-import '../../custom_widgets/app_text.dart';
-import '../../custom_widgets/conference_logo.dart';
-import '../../custom_widgets/custom_button.dart';
-import '../../custom_widgets/verification_code_field.dart';
 
-class VerificationScreen extends StatefulWidget {
-  const VerificationScreen({super.key});
+import '../../utils/shared_preference.dart';
+import '../../view_model/forget_password_viewmodel/forget_pass_viewmodel.dart';
+
+
+// ==================== OTP VERIFICATION SCREEN ====================
+/// Screen for verifying OTP code sent to user's email
+
+class OTPVerificationScreen extends StatefulWidget {
+  const OTPVerificationScreen({Key? key}) : super(key: key);
 
   @override
-  State<VerificationScreen> createState() => _VerificationScreenState();
+  State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
 }
 
-class _VerificationScreenState extends State<VerificationScreen> {
-  String verificationCode = '';
-  String userEmail = 'user@example.com';
+class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
+  final OTPVerificationController controller = Get.put(OTPVerificationController());
+  final List<TextEditingController> otpControllers = List.generate(6, (index) => TextEditingController());
+  final List<FocusNode> focusNodes = List.generate(6, (index) => FocusNode());
+  String userEmail = '';
 
-  void _verifyCode() {
-    if (verificationCode.length == 4) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Code verified!')));
-      Get.to(ResetPasswordScreen());
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter complete code')),
-      );
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadEmail();
   }
 
-  void _resendCode() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Code resent!')));
+  Future<void> _loadEmail() async {
+    final email = await SharedPrefsHelper.getPassResetEmail();
+    setState(() {
+      userEmail = email ?? 'your email';
+    });
+  }
+
+  @override
+  void dispose() {
+    for (var controller in otpControllers) {
+      controller.dispose();
+    }
+    for (var node in focusNodes) {
+      node.dispose();
+    }
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    double height = MediaQuery.of(context).size.height;
-    double width = MediaQuery.of(context).size.width;
     return Scaffold(
-      body: Column(
-        children: [
-          const ConferenceLogo(),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: width * 0.06),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 40),
-                    const AppText(
-                      text: 'Enter Verification Code',
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/al_sharq_logo.png',
+              height: 40,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(Icons.account_balance, color: Colors.white);
+              },
+            ),
 
-                      fontSize: 20,
+          ],
+        ),
+        backgroundColor: Color(0xFF9B2033),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            SizedBox(height: 20),
 
-                      color: AppColors.blackColor,
+            // ==================== HEADER SECTION ====================
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Color(0xFF9B2033).withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.mail_outline,
+                size: 60,
+                color: Color(0xFF9B2033),
+              ),
+            ),
+            SizedBox(height: 30),
+            Text(
+              'Verify Your Email',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF9B2033),
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Enter the 6-digit code sent to',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 8),
+            Text(
+              userEmail,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 40),
+
+            // ==================== OTP INPUT SECTION ====================
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(6, (index) {
+                return SizedBox(
+                  width: 50,
+                  height: 60,
+                  child: TextField(
+                    controller: otpControllers[index],
+                    focusNode: focusNodes[index],
+                    textAlign: TextAlign.center,
+                    maxLength: 1,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 16),
-                    AppText(
-                      text:
-                          'We\'ve sent a 4-digit verification code to your email address. Please enter the code below to continue.',
-                      textAlign: TextAlign.center,
-                      fontSize: 14,
-                    ),
-                    const SizedBox(height: 8),
-                    RichText(
-                      text: TextSpan(
-                        text: 'Code sent to: ',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        children: [
-                          TextSpan(
-                            text: userEmail,
-                            style: TextStyle(
-                              color: AppColors.blackColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                    decoration: InputDecoration(
+                      counterText: '',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        AppText(text: 'Code expires in ', fontSize: 14),
-                        AppText(text: "02:30"),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    VerificationCodeField(
-                      length: 4,
-                      onChanged: (value) {
-                        setState(() {
-                          verificationCode = value;
-                        });
-                      },
-                      onCompleted: (value) => _verifyCode(),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Didn\'t receive the code?',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppColors.darkgrey,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _resendCode,
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: AppText(
-                            text: 'Resend Code',
-                            color: AppColors.primaryColor,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    CustomButton(text: 'Verify Code', onPressed: _verifyCode),
-                    const SizedBox(height: 14),
-                    TextButton(
-                      onPressed: () {
-                        // Handle changing email
-                      },
-                      child: AppText(
-                        text: 'Try a different email address',
-
-                        color: AppColors.primaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        decoration: TextDecoration.underline,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Color(0xFF9B2033), width: 2),
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[50],
                     ),
-                    const SizedBox(height: 100),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AppText(
-                          text: 'Need help? ',
+                    onChanged: (value) {
+                      controller.updateOTPDigit(index, value);
 
-                          color: AppColors.blackColor,
-                          fontSize: 11,
-                        ),
-                        TextButton(
-                          onPressed: () {},
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: AppText(
-                            text: 'Contact Support',
-                            color: AppColors.primaryColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ],
+                      if (value.isNotEmpty && index < 5) {
+                        focusNodes[index + 1].requestFocus();
+                      } else if (value.isEmpty && index > 0) {
+                        focusNodes[index - 1].requestFocus();
+                      }
+                    },
+                  ),
+                );
+              }),
+            ),
+            SizedBox(height: 30),
+
+            // ==================== COUNTDOWN TIMER SECTION ====================
+            Obx(() => controller.countdown.value > 0
+                ? Text(
+              'Resend code in ${controller.countdown.value}s',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            )
+                : SizedBox()),
+            SizedBox(height: 20),
+
+            // ==================== ERROR MESSAGE SECTION ====================
+            Obx(() => controller.errorMessage.value.isNotEmpty
+                ? Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      controller.errorMessage.value,
+                      style: TextStyle(color: Colors.red[700]),
                     ),
-                    const SizedBox(height: 40),
-                  ],
+                  ),
+                ],
+              ),
+            )
+                : SizedBox()),
+            SizedBox(height: 30),
+
+            // ==================== VERIFY BUTTON SECTION ====================
+            Obx(() => SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: controller.isLoading.value ? null : controller.verifyOTP,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF9B2033),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+                child: controller.isLoading.value
+                    ? SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+                    : Text(
+                  'Verify Code',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            )),
+            SizedBox(height: 20),
+
+            // ==================== RESEND CODE SECTION ====================
+            Obx(() => TextButton(
+              onPressed: controller.canResend.value && !controller.isLoading.value
+                  ? controller.resendOTP
+                  : null,
+              child: Text(
+                'Resend Code',
+                style: TextStyle(
+                  color: controller.canResend.value
+                      ? Color(0xFF9B2033)
+                      : Colors.grey,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            )),
+            SizedBox(height: 10),
+
+            // ==================== BACK BUTTON SECTION ====================
+            TextButton.icon(
+              onPressed: () => Get.back(),
+              icon: Icon(Icons.arrow_back, color: Colors.grey[700]),
+              label: Text(
+                'Back',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

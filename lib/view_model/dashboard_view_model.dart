@@ -6,30 +6,39 @@ import '../data/response_models/dashboard_response_model.dart';
 class DashboardViewModel extends GetxController {
   final DashboardRepository _repository = DashboardRepository();
 
-  final Rx<DashboardResponseModel?> _dashboardData = Rx<DashboardResponseModel?>(null);
-  final RxBool _isLoading = false.obs;
-  final RxString _error = ''.obs;
-  final RxString _lastUpdated = 'Just now'.obs;
+  // Make these Rx variables
+  final dashboardData = Rxn<DashboardResponseModel>();
+  final isLoading = false.obs;
+  final error = ''.obs;
+  final lastUpdated = 'Just now'.obs;
 
-  DashboardResponseModel? get dashboardData => _dashboardData.value;
-  bool get isLoading => _isLoading.value;
-  String get error => _error.value;
-  String get lastUpdated => _lastUpdated.value;
+  @override
+  void onInit() {
+    super.onInit();
+    // Optional: Fetch data when viewmodel is initialized
+    // fetchDashboardData();
+  }
 
   Future<void> fetchDashboardData() async {
-    _isLoading.value = true;
-    _error.value = '';
-    update();
-
     try {
-      _dashboardData.value = await _repository.getDashboardData();
-      _lastUpdated.value = 'Just now';
+      isLoading.value = true;
+      error.value = '';
+      dashboardData.value = null; // Clear old data
+
+      print('DEBUG: Starting to fetch dashboard data...');
+      final response = await _repository.getDashboardData();
+      print('DEBUG: Dashboard data received from repository');
+
+      dashboardData.value = response;
+      lastUpdated.value = 'Just now';
+      print('DEBUG: Dashboard data loaded successfully into ViewModel');
+
     } catch (e) {
-      _error.value = e.toString();
+      error.value = e.toString();
       print('DEBUG: ViewModel error: $e');
     } finally {
-      _isLoading.value = false;
-      update();
+      isLoading.value = false;
+      print('DEBUG: isLoading set to false');
     }
   }
 
@@ -38,17 +47,17 @@ class DashboardViewModel extends GetxController {
   }
 
   void clearError() {
-    _error.value = '';
-    update();
+    error.value = '';
   }
 
   // Calculate total checked in today
   int getCheckedInToday() {
-    final data = _dashboardData.value;
-    if (data == null || data.dailyAttendance.isEmpty) return 0;
+    if (dashboardData.value == null || dashboardData.value!.dailyAttendance.isEmpty) {
+      return 0;
+    }
 
     final today = DateTime.now().toIso8601String().split('T')[0];
-    final todayAttendance = data.dailyAttendance.firstWhere(
+    final todayAttendance = dashboardData.value!.dailyAttendance.firstWhere(
           (attendance) => attendance.date == today,
       orElse: () => DailyAttendance(date: today, count: 0),
     );
@@ -58,54 +67,64 @@ class DashboardViewModel extends GetxController {
 
   // Calculate total participants (sum of all attendance)
   int getTotalParticipants() {
-    final data = _dashboardData.value;
-    if (data == null || data.dailyAttendance.isEmpty) return 0;
+    if (dashboardData.value == null || dashboardData.value!.dailyAttendance.isEmpty) {
+      return 0;
+    }
 
-    return data.dailyAttendance.fold(0, (sum, attendance) => sum + attendance.count);
+    return dashboardData.value!.dailyAttendance.fold(
+        0,
+            (sum, attendance) => sum + attendance.count
+    );
   }
 
-  // Get attendance data for charts - FIXED NULL SAFETY
+  // Get attendance data for charts
   List<double> getAttendanceChartData() {
-    final data = _dashboardData.value;
-    if (data == null || data.dailyAttendance.isEmpty) {
+    if (dashboardData.value == null || dashboardData.value!.dailyAttendance.isEmpty) {
       return List.filled(7, 0.0);
     }
 
-    return data.dailyAttendance.map((attendance) => attendance.count.toDouble()).toList();
+    return dashboardData.value!.dailyAttendance
+        .take(7) // Take only first 7 days
+        .map((attendance) => attendance.count.toDouble())
+        .toList();
   }
 
-  // Get day labels for charts - FIXED NULL SAFETY
+  // Get day labels for charts
   List<String> getDayLabels() {
-    final data = _dashboardData.value;
-    if (data == null || data.dailyAttendance.isEmpty) {
+    if (dashboardData.value == null || dashboardData.value!.dailyAttendance.isEmpty) {
       return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     }
 
-    // Extract day names from dates
-    return data.dailyAttendance.map((attendance) {
-      final date = DateTime.parse(attendance.date);
-      return _getDayAbbreviation(date.weekday);
-    }).toList();
+    // Take only first 7 days and format them
+    return dashboardData.value!.dailyAttendance
+        .take(7)
+        .map((attendance) {
+      try {
+        final date = DateTime.parse(attendance.date);
+        return _getDayAbbreviation(date.weekday);
+      } catch (e) {
+        return 'Day';
+      }
+    })
+        .toList();
   }
 
   String _getDayAbbreviation(int weekday) {
     switch (weekday) {
-      case DateTime.sunday:
-        return 'Sun';
-      case DateTime.monday:
-        return 'Mon';
-      case DateTime.tuesday:
-        return 'Tue';
-      case DateTime.wednesday:
-        return 'Wed';
-      case DateTime.thursday:
-        return 'Thu';
-      case DateTime.friday:
-        return 'Fri';
-      case DateTime.saturday:
-        return 'Sat';
-      default:
-        return 'Day';
+      case DateTime.sunday: return 'Sun';
+      case DateTime.monday: return 'Mon';
+      case DateTime.tuesday: return 'Tue';
+      case DateTime.wednesday: return 'Wed';
+      case DateTime.thursday: return 'Thu';
+      case DateTime.friday: return 'Fri';
+      case DateTime.saturday: return 'Sat';
+      default: return 'Day';
     }
+  }
+
+  @override
+  void onClose() {
+    // Clean up if needed
+    super.onClose();
   }
 }

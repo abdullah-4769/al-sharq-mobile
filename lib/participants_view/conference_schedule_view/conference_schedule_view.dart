@@ -9,6 +9,7 @@ import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
 import '../../custom_widgets/custom_text_field.dart';
 import '../../data/response_models/participant_response_model/event_session_response_model.dart';
+import '../../data/response_models/participant_response_model/session_model.dart';
 import '../../utils/shared_preference.dart';
 import '../../view_model/participant_viewmodel/event_session_viewmodel.dart';
 import '../../view_model/participant_viewmodel/all_bookmark_sessions_viewmodel.dart';
@@ -74,14 +75,21 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
     });
   }
 
-  // Filter sessions based on search query
+  // Filter sessions based on search query AND exclude past sessions
   List<SessionModel> get _filteredSessions {
     final allSessions = sessionsController.allSessions;
+
+    // First, filter out past sessions (show only current and future)
+    List<SessionModel> currentAndFutureSessions = allSessions
+        .where((session) => session.isCurrentOrFuture)  // Use the new property
+        .toList();
+
     if (_searchQuery.isEmpty) {
-      return allSessions;
+      return currentAndFutureSessions;
     }
 
-    return allSessions.where((session) =>
+    // Then apply search filter
+    return currentAndFutureSessions.where((session) =>
     session.sessionTitle.toLowerCase().contains(_searchQuery.toLowerCase()) ||
         (session.sessionDescription?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
         session.speakers.any((speaker) =>
@@ -92,7 +100,14 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
     ).toList();
   }
 
-  // Group sessions by date
+  // Get upcoming sessions count (excluding past)
+  int get _upcomingSessionsCount {
+    return sessionsController.allSessions
+        .where((session) => session.isCurrentOrFuture)
+        .length;
+  }
+
+  // Group sessions by date (only current and future)
   Map<String, List<SessionModel>> get _sessionsByDate {
     final Map<String, List<SessionModel>> grouped = {};
 
@@ -238,6 +253,7 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
       body: Obx(() {
         final sessions = sessionsController.allSessions;
         final isLoading = sessionsController.isLoading.value;
+
         if (isLoading && sessions.isEmpty) {
           return const Center(
             child: Column(
@@ -254,6 +270,11 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
             ),
           );
         }
+
+        // Calculate past sessions count for info
+        final pastSessionsCount = sessions.where((s) => s.isPast).length;
+        final upcomingSessionsCount = _upcomingSessionsCount;
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -350,7 +371,56 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+
+              // Show info about past sessions if any
+              if (pastSessionsCount > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.grey.shade600, size: 18),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            '$pastSessionsCount past session${pastSessionsCount == 1 ? '' : 's'} hidden',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // Schedule Header with count
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const AppText(
+                    text: "Upcoming Sessions",
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  AppText(
+                    text: "$upcomingSessionsCount sessions",
+                    fontSize: 14,
+                    color: AppColors.darkgrey,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
 
               // Dynamic Session List
               if (_filteredSessions.isEmpty && _searchQuery.isNotEmpty)
@@ -378,7 +448,7 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
           ),
           const SizedBox(height: 16),
           AppText(
-            text: 'No sessions found',
+            text: 'No upcoming sessions found',
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: AppColors.blackColor,
@@ -407,14 +477,14 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
           ),
           const SizedBox(height: 16),
           AppText(
-            text: 'No Sessions Available',
+            text: 'No Upcoming Sessions',
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: AppColors.blackColor,
           ),
           const SizedBox(height: 8),
           AppText(
-            text: 'Check back later for conference sessions',
+            text: 'All sessions have been completed',
             fontSize: 14,
             color: AppColors.darkgrey,
             textAlign: TextAlign.center,
@@ -430,23 +500,32 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
     _sessionsByDate.forEach((date, sessions) {
       widgets.addAll([
         // Date Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: AppText(
-                text: date,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue.shade100),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: AppText(
+                  text: date,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue.shade800,
+                ),
               ),
-            ),
-            AppText(
-              text: "${sessions.length} sessions",
-              fontSize: 14,
-              color: AppColors.darkgrey,
-              fontWeight: FontWeight.w500,
-            ),
-          ],
+              AppText(
+                text: "${sessions.length} session${sessions.length == 1 ? '' : 's'}",
+                fontSize: 13,
+                color: Colors.blue.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
 
@@ -462,7 +541,8 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
   // Session Card Widget
   Widget _buildSessionCard(SessionModel session) {
     final tagColor = _getTagColor(session.category ?? 'Session');
-    final isLive = session.isLive ?? false;
+    final isLive = session.isCurrentlyLive; // Use calculated live status
+    final isUpcoming = session.isUpcomingToday; // Check if upcoming today
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -470,7 +550,10 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
       decoration: BoxDecoration(
         color: AppColors.whiteColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.mediumGreyColor),
+        border: Border.all(
+          color: isLive ? Colors.red.shade300 : AppColors.mediumGreyColor,
+          width: isLive ? 2 : 1,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -482,7 +565,7 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title + Live Indicator
+          // Title + Status Indicators
           Row(
             children: [
               Expanded(
@@ -505,10 +588,32 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.live_tv, size: 12, color: Colors.white),
+                     // Icon(Icons.live_tv, size: 12, color: Colors.white),
                       SizedBox(width: 4),
                       AppText(
-                        text: "LIVE",
+                        text: "LIVE NOW",
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ] else if (isUpcoming) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.access_time, size: 12, color: Colors.white),
+                      SizedBox(width: 4),
+                      AppText(
+                        text: "UPCOMING",
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -536,15 +641,33 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
           // Time + Tag
           Row(
             children: [
-              const Icon(Icons.calendar_today, size: 16, color: AppColors.darkgrey),
+              Icon(
+                session.isToday ? Icons.access_time : Icons.calendar_today,
+                size: 16,
+                color: AppColors.darkgrey,
+              ),
               const SizedBox(width: 6),
               Expanded(
-                child: AppText(
-                  text: _getFormattedTime(session),
-                  fontSize: 14,
-                  color: AppColors.darkgrey,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      text: _getFormattedTime(session),
+                      fontSize: 14,
+                      color: AppColors.darkgrey,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (session.minutesUntilStart != null && session.minutesUntilStart! > 0)
+                      AppText(
+                        text: session.minutesUntilStart! > 60
+                            ? 'Starts in ${session.minutesUntilStart! ~/ 60}h ${session.minutesUntilStart! % 60}m'
+                            : 'Starts in ${session.minutesUntilStart}m',
+                        fontSize: 12,
+                        color: AppColors.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),
@@ -590,7 +713,7 @@ class _ConferenceScheduleScreenState extends State<ConferenceScheduleScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const AppText(
-                    text: "Room:",
+                    text: "Location:",
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),

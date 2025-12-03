@@ -17,7 +17,7 @@ class OrganizerDashboardScreen extends StatefulWidget {
 }
 
 class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> with TickerProviderStateMixin {
-  final DashboardViewModel dashboardVM = Get.put(DashboardViewModel());
+  final DashboardViewModel dashboardVM = Get.put(DashboardViewModel()); // Changed from Get.put to Get.find
   late AnimationController _fadeController;
   late AnimationController _slideController;
   String selectedFilter = 'Weekly';
@@ -35,7 +35,14 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
       duration: const Duration(milliseconds: 600),
     );
 
-    dashboardVM.fetchDashboardData();
+    // Check if we need to fetch data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final data = dashboardVM.dashboardData.value;
+      if (data == null && dashboardVM.isLoading.value) {
+        dashboardVM.fetchDashboardData();
+      }
+    });
+
     _fadeController.forward();
     _slideController.forward();
   }
@@ -48,8 +55,8 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
   }
 
   String _generateCSV() {
-    final data = dashboardVM.dashboardData;
-    if (data == null) return '';
+    final data = dashboardVM.dashboardData.value;
+    if (data == null) return 'No data available';
 
     StringBuffer csv = StringBuffer();
 
@@ -104,13 +111,76 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
     }
   }
 
+  Future<Uint8List> _generateDashboardPDF() async {
+    final data = dashboardVM.dashboardData.value;
+    if (data == null) return Uint8List(0);
+
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        build: (context) => [
+          pw.Text(
+            "Dashboard Report",
+            style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 10),
+          pw.Text("Generated: ${DateTime.now()}"),
+          pw.Divider(),
+
+          // Attendance Section
+          pw.Text("Daily Attendance", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 8),
+          pw.Table.fromTextArray(
+            headers: ["Date", "Count"],
+            data: data.dailyAttendance
+                .map((e) => [e.date.toString(), e.count.toString()])
+                .toList(),
+          ),
+          pw.SizedBox(height: 20),
+
+          // Top Sessions Section
+          pw.Text("Popular Sessions", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 8),
+          pw.Table.fromTextArray(
+            headers: ["Rank", "Title", "Speakers", "Registrations"],
+            data: data.topSessions.asMap().entries.map((e) {
+              final i = e.key + 1;
+              final s = e.value;
+              return [i.toString(), s.title, s.speakerNames, s.totalRegistrations.toString()];
+            }).toList(),
+          ),
+          pw.SizedBox(height: 20),
+
+          // Summary
+          pw.Text("Summary", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 8),
+          pw.Table.fromTextArray(
+            headers: ["Metric", "Value"],
+            data: [
+              ["Total Participants", dashboardVM.getTotalParticipants().toString()],
+              ["Checked In Today", dashboardVM.getCheckedInToday().toString()],
+              ["Active Sessions", data.topSessions.length.toString()],
+            ],
+          ),
+        ],
+      ),
+    );
+
+    return pdf.save();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: Obx(() {
-        if (dashboardVM.isLoading && dashboardVM.dashboardData == null) {
+        final data = dashboardVM.dashboardData.value;
+        final isLoading = dashboardVM.isLoading.value;
+        final error = dashboardVM.error.value;
+
+        // Show loading when loading AND no data
+        if (isLoading && data == null) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -125,7 +195,8 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
           );
         }
 
-        if (dashboardVM.error.isNotEmpty && dashboardVM.dashboardData == null) {
+        // Show error when there's an error AND no data
+        if (error.isNotEmpty && data == null) {
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -144,7 +215,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    dashboardVM.error,
+                    error,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey[600]),
                   ),
@@ -169,6 +240,26 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
           );
         }
 
+        // Show loading if no data (even if not actively loading)
+        if (data == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent[600]!),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Loading dashboard data...',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // We have data, show the dashboard
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
@@ -191,13 +282,13 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
                       children: [
                         _buildTimeFilters(),
                         const SizedBox(height: 20),
-                        _buildStatsCards(),
+                        _buildStatsCards(data),
                         const SizedBox(height: 20),
                         _buildAttendanceChart(),
                         const SizedBox(height: 20),
                         _buildEngagementChart(),
                         const SizedBox(height: 20),
-                        _buildPopularSessions(),
+                        _buildPopularSessions(data),
                         const SizedBox(height: 20),
                         _buildExportButton(),
                         const SizedBox(height: 20),
@@ -244,7 +335,7 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
           padding: const EdgeInsets.only(right: 8),
           child: Center(
             child: Text(
-              dashboardVM.lastUpdated,
+              dashboardVM.lastUpdated.value,
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 11,
@@ -314,12 +405,32 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
     );
   }
 
-  Widget _buildStatsCards() {
+  Widget _buildStatsCards(DashboardResponseModel data) {
     final stats = [
-      {'title': 'Checked In', 'value': dashboardVM.getCheckedInToday().toString(), 'icon': Icons.login, 'color': Colors.redAccent},
-      {'title': 'Total Users', 'value': dashboardVM.getTotalParticipants().toString(), 'icon': Icons.people, 'color': Colors.green},
-      {'title': 'Sessions', 'value': dashboardVM.dashboardData?.topSessions.length.toString() ?? '0', 'icon': Icons.event, 'color': Colors.orange},
-      {'title': 'Rate', 'value': '78%', 'icon': Icons.trending_up, 'color': Colors.purple},
+      {
+        'title': 'Checked In',
+        'value': dashboardVM.getCheckedInToday().toString(),
+        'icon': Icons.login,
+        'color': Colors.redAccent
+      },
+      {
+        'title': 'Total Users',
+        'value': dashboardVM.getTotalParticipants().toString(),
+        'icon': Icons.people,
+        'color': Colors.green
+      },
+      {
+        'title': 'Sessions',
+        'value': data.topSessions.length.toString(),
+        'icon': Icons.event,
+        'color': Colors.orange
+      },
+      {
+        'title': 'Rate',
+        'value': '78%',
+        'icon': Icons.trending_up,
+        'color': Colors.purple
+      },
     ];
 
     return GridView.builder(
@@ -593,8 +704,8 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
     );
   }
 
-  Widget _buildPopularSessions() {
-    final sessions = dashboardVM.dashboardData?.topSessions ?? [];
+  Widget _buildPopularSessions(DashboardResponseModel data) {
+    final sessions = data.topSessions;
 
     if (sessions.isEmpty) {
       return Container(
@@ -777,115 +888,6 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
     );
   }
 
-
-  Widget _buildSessionItem(int rank, TopSession session) {
-    final colors = [Colors.amber, Colors.grey[400], Colors.brown[400], Colors.redAccent];
-    final rankColor = rank <= 3 ? colors[rank - 1] : colors[3];
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [rankColor!, rankColor.withOpacity(0.7)],
-              ),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: rankColor.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: rank <= 3
-                  ? Icon(Icons.emoji_events, color: Colors.white, size: 18)
-                  : Text(
-                rank.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.person, size: 12, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        session.speakerNames,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.redAccent[600]!, Colors.redAccent[400]!],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.people, color: Colors.white, size: 12),
-                const SizedBox(width: 4),
-                Text(
-                  '${session.totalRegistrations}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildExportButton() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -945,18 +947,19 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: isExporting ? null : _generateCSV,
-              icon: isExporting
-                  ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
-                ),
-              )
-                  : const Icon(Icons.copy),
-              label: Text(isExporting ? 'Copying...' : 'Copy to Clipboard'),
+              onPressed: () {
+                final csv = _generateCSV();
+                Clipboard.setData(ClipboardData(text: csv));
+                Get.snackbar(
+                  'Success',
+                  'CSV data copied to clipboard',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                );
+              },
+              icon: const Icon(Icons.copy),
+              label: const Text('Copy to Clipboard'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.redAccent[600],
@@ -972,67 +975,4 @@ class _OrganizerDashboardScreenState extends State<OrganizerDashboardScreen> wit
       ),
     );
   }
-}
-
-
-
-Future<Uint8List> _generateDashboardPDF() async {
-  final DashboardViewModel dashboardVM = Get.find<DashboardViewModel>();
-
-  final pdf = pw.Document();
-
-  final data = dashboardVM.dashboardData;
-  if (data == null) return Uint8List(0);
-
-  pdf.addPage(
-    pw.MultiPage(
-      build: (context) => [
-        pw.Text(
-          "Dashboard Report",
-          style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
-        ),
-        pw.SizedBox(height: 10),
-        pw.Text("Generated: ${DateTime.now()}"),
-        pw.Divider(),
-
-        // Attendance Section
-        pw.Text("Daily Attendance", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 8),
-        pw.Table.fromTextArray(
-          headers: ["Date", "Count"],
-          data: data.dailyAttendance
-              .map((e) => [e.date.toString(), e.count.toString()])
-              .toList(),
-        ),
-        pw.SizedBox(height: 20),
-
-        // Top Sessions Section
-        pw.Text("Popular Sessions", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 8),
-        pw.Table.fromTextArray(
-          headers: ["Rank", "Title", "Speakers", "Registrations"],
-          data: data.topSessions.asMap().entries.map((e) {
-            final i = e.key + 1;
-            final s = e.value;
-            return [i.toString(), s.title, s.speakerNames, s.totalRegistrations.toString()];
-          }).toList(),
-        ),
-        pw.SizedBox(height: 20),
-
-        // Summary
-        pw.Text("Summary", style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 8),
-        pw.Table.fromTextArray(
-          headers: ["Metric", "Value"],
-          data: [
-            ["Total Participants", dashboardVM.getTotalParticipants().toString()],
-            ["Checked In Today", dashboardVM.getCheckedInToday().toString()],
-            ["Active Sessions", data.topSessions.length.toString()],
-          ],
-        ),
-      ],
-    ),
-  );
-
-  return pdf.save();
 }

@@ -25,7 +25,7 @@ class _OrganizerForgotPasswordScreenState extends State<OrganizerForgotPasswordS
     if (_formKey.currentState!.validate()) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const VerificationScreen()),
+        MaterialPageRoute(builder: (context) =>  OTPVerificationScreen()),
       );
     }
   }
@@ -100,7 +100,7 @@ class _OrganizerForgotPasswordScreenState extends State<OrganizerForgotPasswordS
                     CustomButton(
                       text: 'Send Code',
                       onPressed: () {
-                        Get.to(VerificationScreen());
+                        Get.to(OTPVerificationScreen());
                       },
                     ),
                     SizedBox(height: MediaQuery.of(context).size.height * 0.3),

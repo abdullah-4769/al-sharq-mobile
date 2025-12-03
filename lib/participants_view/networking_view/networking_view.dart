@@ -262,7 +262,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
                       ),
                       child: Center(
                         child: Obx(() => AppText(
-                          text: 'Directory (${pendingConnectionsViewModel.pendingConnections.length})',
+                          text: 'Requests (${pendingConnectionsViewModel.pendingConnections.length})',
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: _tabController.index == 0

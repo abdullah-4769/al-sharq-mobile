@@ -1,3 +1,4 @@
+import 'package:al_sharq_conference/participants_view/auth/app_routes.dart';
 import 'package:al_sharq_conference/participants_view/splash_view/splash_view.dart';
 import 'package:al_sharq_conference/utils/service_initializer.dart';
 import 'package:al_sharq_conference/view_model/auth/signup_view_model.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
           ),
           home: const SplashView(),
+          getPages: AppRoutes.routes,
         );
       },
     );

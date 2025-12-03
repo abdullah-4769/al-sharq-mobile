@@ -6,10 +6,11 @@ import 'package:al_sharq_conference/custom_widgets/custom_button.dart';
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
 import 'package:al_sharq_conference/custom_widgets/custom_text_field.dart';
 import 'package:al_sharq_conference/organizer_view/add_new_venue/add_new_venue_view.dart';
-import 'package:al_sharq_conference/organizer_view/venue_details/organizer_venue_details.dart';
+
 import '../../data/response_models/organizer_response_models/organizer_venue_show_model.dart';
 import '../../view_model/organizer_viewmodels/organizer_event_delete_viewmodel.dart';
 import '../../view_model/organizer_viewmodels/organizer_venue_show_viewmodel.dart';
+import 'package:al_sharq_conference/organizer_view/venue_details/organizer_venue_details.dart';
 import 'interactive_venue_map.dart';
 
 class OrganizerVenueMapsScreen extends StatefulWidget {
@@ -193,7 +194,7 @@ class _OrganizerVenueMapsScreenState extends State<OrganizerVenueMapsScreen> {
                 child: VenueMapComponent(
                   events: events,
                   onMarkerTap: (event) {
-                    Get.to(() => OrganizerVenueDetails(event: event));
+                    Get.to(() => EventDetailsScreen( event:  event));
                   },
                 ),
               ),
@@ -331,7 +332,7 @@ class _OrganizerVenueMapsScreenState extends State<OrganizerVenueMapsScreen> {
                   children: [
                     InkWell(
                       onTap: () {
-                        Get.to(() => OrganizerVenueDetails(event: event));
+                        Get.to(() => EventDetailsScreen(event: event));
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

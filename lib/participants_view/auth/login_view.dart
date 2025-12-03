@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Spacer(),
                         TextButton(
                           onPressed: _viewModel.isLoading.value ? null : () {
-                            Get.to(() => const ForgotPasswordScreen());
+                            Get.to(() =>  ForgotPasswordScreen());
                           },
                           child: AppText(
                             text: 'Forget Password',

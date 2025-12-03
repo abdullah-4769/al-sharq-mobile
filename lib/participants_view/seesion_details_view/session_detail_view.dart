@@ -10,6 +10,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/response_models/participant_response_model/event_session_response_model.dart';
+import '../../data/response_models/participant_response_model/session_model.dart';
 import '../../data/response_models/speaker_response_models/speaker_sessions_detail_show_model.dart';
 import '../../speaker_view/manage_session_speaker/manage_session_speaker.dart';
 import '../../view_model/participant_viewmodel/make_session_bookmark_viewmodel.dart';

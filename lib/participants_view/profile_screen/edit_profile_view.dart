@@ -31,7 +31,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  late TextEditingController _organizationController;
+  //late TextEditingController _organizationController;
   late TextEditingController _bioController; // ADD THIS
   final ParticipantProfileUpdateViewModel _updateViewModel = Get.put(ParticipantProfileUpdateViewModel());
   final ParticipantProfileGetViewModel _profileViewModel = Get.find<ParticipantProfileGetViewModel>();
@@ -45,7 +45,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.currentName);
     _emailController = TextEditingController(text: widget.currentEmail);
-    _organizationController = TextEditingController(text: widget.currentOrganization);
+    //_organizationController = TextEditingController(text: widget.currentOrganization);
     _bioController = TextEditingController(text: widget.currentBio ?? ''); // ADD THIS
   }
 
@@ -53,7 +53,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _organizationController.dispose();
+   // _organizationController.dispose();
     _bioController.dispose(); // ADD THIS
     super.dispose();
   }
@@ -120,7 +120,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final success = await _updateViewModel.updateProfile(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        organization: _organizationController.text.trim(),
+       // organization: _organizationController.text.trim(),
         filePath: _imagePath,
         bio: _bioController.text.trim(), // ADD THIS
       );
@@ -266,19 +266,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 },
               ),
 
-              const SizedBox(height: 20),
+             // const SizedBox(height: 20),
 
-              // Organization Field
-              _buildFormField(
-                label: 'Organization',
-                controller: _organizationController,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your organization';
-                  }
-                  return null;
-                },
-              ),
+              // // Organization Field
+              // _buildFormField(
+              //   label: 'Organization',
+              //   controller: _organizationController,
+              //   validator: (value) {
+              //     if (value == null || value.isEmpty) {
+              //       return 'Please enter your organization';
+              //     }
+              //     return null;
+              //   },
+              // ),
 
               const SizedBox(height: 20),
 

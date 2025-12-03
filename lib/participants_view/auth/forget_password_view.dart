@@ -1,142 +1,196 @@
-import 'package:al_sharq_conference/app_colors/app_colors.dart';
-import 'package:al_sharq_conference/custom_widgets/app_text.dart';
 import 'package:al_sharq_conference/participants_view/auth/verification_view.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
+import '../../view_model/forget_password_viewmodel/forget_pass_viewmodel.dart';
 
-import '../../custom_widgets/conference_logo.dart';
-import '../../custom_widgets/custom_button.dart';
-import '../../custom_widgets/custom_text_field.dart';
-import '../../custom_widgets/form_label.dart';
+// ==================== FORGOT PASSWORD SCREEN ====================
+/// Screen for initiating password reset by entering email
 
-class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+class ForgotPasswordScreen extends StatelessWidget {
+  final ForgotPasswordController controller = Get.put(ForgotPasswordController());
 
-  @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-
-  void _sendResetCode() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const VerificationScreen()),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
-  }
+  ForgotPasswordScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          const ConferenceLogo(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal:
-                    MediaQuery.of(context).size.width *
-                    0.06, // 10% of screen width
-                vertical:
-                    MediaQuery.of(context).size.height *
-                    0.02, // 2% of screen height
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/al_sharq_logo.png', // Add your logo asset
+              height: 40,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(Icons.account_balance, color: Colors.white);
+              },
+            ),
+
+          ],
+        ),
+        backgroundColor: Color(0xFF9B2033),
+        elevation: 0,
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 20),
+
+            // ==================== HEADER SECTION ====================
+            Text(
+              'Forgot Password?',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF9B2033),
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.04,
-                    ), // 4% of screen height
-                    AppText(
-                      text: "Forget Password",
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Enter your email address and we\'ll send you a code to reset your password',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            SizedBox(height: 40),
+
+            // ==================== EMAIL INPUT SECTION ====================
+            Text(
+              'Email Address',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 8),
+            TextField(
+              onChanged: (value) => controller.email.value = value,
+              decoration: InputDecoration(
+                hintText: 'Enter your email',
+                prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF9B2033)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Color(0xFF9B2033), width: 2),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              keyboardType: TextInputType.emailAddress,
+            ),
+            SizedBox(height: 12),
+
+            // ==================== ERROR MESSAGE SECTION ====================
+            Obx(() => controller.errorMessage.value.isNotEmpty
+                ? Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      controller.errorMessage.value,
+                      style: TextStyle(color: Colors.red[700]),
                     ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.06,
-                    ), // 6% of screen height
-                    AppText(
-                      text:
-                          'Enter your email address and we\'ll send you a 4-digit code to reset your password',
-                      textAlign: TextAlign.center,
-                      fontSize: 14,
-                      color: AppColors.darkgrey,
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.04,
-                    ), // 4% of screen height
-                    const FormLabel(text: "Enter email", isRequired: true),
-                    CustomTextField(
-                      hintText: 'Enter Your Email Address',
-                      suffixIcon: Icons.mail_outline,
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.04,
-                    ), // 4% of screen height
-                    CustomButton(
-                      text: 'Send Code',
-                      onPressed: () {
-                        Get.to(VerificationScreen());
-                      },
-                    ),
-                    SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-                    TextButton(
-                      onPressed: () {},
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          AppText(
-                            text: "Need Help?",
-                            fontSize: 14,
-                            color: AppColors.blackColor,
-                          ),
-                          AppText(
-                            text: 'Contact Support',
-                            color: AppColors.primaryColor,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.03,
-                    ), // 3% of screen height
-                  ],
+                  ),
+                ],
+              ),
+            )
+                : SizedBox()),
+            SizedBox(height: 30),
+
+            // ==================== SEND CODE BUTTON SECTION ====================
+            Obx(() => SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: controller.isLoading.value ? null : controller.sendOTP,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF9B2033),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+                child: controller.isLoading.value
+                    ? SizedBox(
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+                    : Text(
+                  'Send Verification Code',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            )),
+            SizedBox(height: 20),
+
+            // ==================== ALREADY HAVE CODE SECTION ====================
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  if (controller.email.value.isNotEmpty) {
+                 Get.toNamed('/otp-verification');
+                  } else {
+                    Get.snackbar(
+                      'Error',
+                      'Please enter your email first',
+                      snackPosition: SnackPosition.BOTTOM,
+                    );
+                  }
+                },
+                child: Text(
+                  'Already have a code? Verify now',
+                  style: TextStyle(
+                    color: Color(0xFF9B2033),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+            SizedBox(height: 10),
+
+            // ==================== BACK TO LOGIN SECTION ====================
+            Center(
+              child: TextButton.icon(
+                onPressed: () => Get.back(),
+                icon: Icon(Icons.arrow_back, color: Colors.grey[700]),
+                label: Text(
+                  'Back to Login',
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
-  }
-
-  Widget _buildDivider() {
-    return Container(height: 1, color: Colors.grey[300]);
   }
 }

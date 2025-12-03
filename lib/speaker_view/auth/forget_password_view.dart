@@ -25,7 +25,7 @@ class _SpeakerForgotPasswordScreenState extends State<SpeakerForgotPasswordScree
     if (_formKey.currentState!.validate()) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const VerificationScreen()),
+        MaterialPageRoute(builder: (context) =>  OTPVerificationScreen()),
       );
     }
   }
@@ -100,7 +100,7 @@ class _SpeakerForgotPasswordScreenState extends State<SpeakerForgotPasswordScree
                     CustomButton(
                       text: 'Send Code',
                       onPressed: () {
-                        Get.to(VerificationScreen());
+                        Get.to(OTPVerificationScreen());
                       },
                     ),
                     SizedBox(height: MediaQuery.of(context).size.height * 0.3),

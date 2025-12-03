@@ -1,20 +1,27 @@
+import 'dart:async';
+
 import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
 import 'package:al_sharq_conference/participants_view/forum_chat/chat_list_view.dart';
 import 'package:al_sharq_conference/participants_view/home_page/quick_access_item.dart';
 import 'package:al_sharq_conference/participants_view/networking_view/networking_view.dart';
 import 'package:al_sharq_conference/participants_view/venue_map/venue_map_view.dart';
+import 'package:al_sharq_conference/view_model/seeing_opted_user_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:get/route_manager.dart';
 
 import '../../app_colors/app_colors.dart';
+import '../../custom_global_widget/opted_in_users_list.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../data/response_models/participant_response_model/event_session_response_model.dart';
+import '../../data/response_models/participant_response_model/session_model.dart';
 import '../../images/images.dart';
+import '../../todays_schedule_session.dart';
 import '../../view_model/participant_viewmodel/event_session_viewmodel.dart';
 import '../../view_model/participant_viewmodel/participant_profile/participant_profile_get_viewmodel.dart';
 import '../../view_model/profile_visibility_view_model.dart';
+import '../all_sessions_screen.dart';
 import '../conference_schedule_view/conference_schedule_view.dart';
 import '../faq_view/faq_view.dart';
 import '../forum_chat/forum_chat.dart';
@@ -40,9 +47,8 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
   final EventSessionsViewModel _sessionsViewModel = Get.put(EventSessionsViewModel());
   late AnimationController _animationController;
   late ProfileVisibilityViewModel _profileVisibilityViewModel = Get.put(ProfileVisibilityViewModel());
-
+  final SeeingOptedUserViewModel seeingOptedUserViewModel = Get.put(SeeingOptedUserViewModel());
   bool isVisible = false;
-
 
   @override
   void initState() {
@@ -57,8 +63,29 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     _loadProfile();
     _profileVisibilityViewModel = Get.put(ProfileVisibilityViewModel());
 
+    // Auto-refresh every minute to update live status
+    _startAutoRefresh();
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _stopAutoRefresh();
+    super.dispose();
+  }
+
+  Timer? _refreshTimer;
+
+  void _startAutoRefresh() {
+    _refreshTimer = Timer.periodic(Duration(minutes: 1), (timer) {
+      _loadSessions();
+    });
+  }
+
+  void _stopAutoRefresh() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+  }
   void _loadSessions() {
     _sessionsViewModel.fetchEventSessions(context);
   }
@@ -66,11 +93,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
     final profileViewModel = Get.put(ParticipantProfileGetViewModel());
     profileViewModel.fetchProfile();
   }
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -317,6 +340,8 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                         Get.to(MyAgendaScreen());
                       },
                     ),
+
+
                     QuickAccessItem(
                       imagePath: Images.schedule,
                       title: 'Schedule',
@@ -353,15 +378,15 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                         Get.to(NetworkingScreen());
                       },
                     ),
-                    // QuickAccessItem(
-                    //     imagePath: Images.forums,
-                    //     title: 'Forums',
-                    //     subtitle: 'Discussions',
-                    //     iconBackgroundColor: Colors.teal.shade100,
-                    //     onTap: () {
-                    //       Get.to(ForumsListScreen());
-                    //     }
-                    // ),
+                    QuickAccessItem(
+                        imagePath: Images.session,
+                        title: 'Sessions',
+                        subtitle: 'All',
+                        iconBackgroundColor: Colors.teal.shade100,
+                        onTap: () {
+                          Get.to(AllSessionsScreen());
+                        }
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -419,6 +444,12 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Center(child: OptedInUsersList()),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -434,34 +465,443 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
 
     final allSessions = _sessionsViewModel.allSessions;
 
-    // Find live sessions (isLive: true)
-    final liveSessions = allSessions.where((session) => session.isLive == true).toList();
+    // Find ALL sessions that are currently live based on time
+    final liveSessions = allSessions.where((session) => session.isCurrentlyLive).toList();
+    final liveCount = liveSessions.length;
 
-    if (liveSessions.isEmpty) {
-      // If no live sessions, show the first upcoming session or a default message
-      final nonLiveSessions = allSessions.where((session) => session.isLive == false).toList();
-      if (nonLiveSessions.isNotEmpty) {
-        final nextSession = nonLiveSessions.first;
-        return _buildSessionCard(
-          session: nextSession,
-          isLive: false,
-          title: 'Next Session',
-          onTap: () => _navigateToSessionDetails(nextSession.sessionId),
-        );
-      }
+    // Find today's upcoming sessions (not live, but today)
+    final todaySessions = allSessions.where((session) => session.isToday).toList();
+    final todayUpcomingSessions = todaySessions.where((session) =>
+    session.isUpcomingToday && !session.isCurrentlyLive
+    ).toList();
 
-      return _buildDefaultUpdateCard();
-    }
+    // Sort upcoming sessions by start time
+    todayUpcomingSessions.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
 
-    // Show the first live session
-    final liveSession = liveSessions.first;
-    return _buildSessionCard(
-      session: liveSession,
-      isLive: true,
-      title: 'Live Now',
-      onTap: () => _navigateToSessionDetails(liveSession.sessionId),
+    return Column(
+      children: [
+        // Live Now Section - Show if there are any live sessions
+        if (liveSessions.isNotEmpty)
+          _buildLiveNowCard(liveSessions.first, liveCount),
+
+        // Next Session Section (show even if there's a live session)
+        if (todayUpcomingSessions.isNotEmpty)
+          _buildNextSessionCard(todayUpcomingSessions.first),
+
+        // If no live and no upcoming, show default
+        if (liveSessions.isEmpty && todayUpcomingSessions.isEmpty)
+          _buildDefaultUpdateCard(),
+      ],
     );
   }
+
+  Widget _buildLiveNowCard(SessionModel session, int liveCount) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.3),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          _buildBlinkingLiveIndicator(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'LIVE NOW',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          // Show count if more than 1 live session
+                          if (liveCount > 1)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '$liveCount',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  session.sessionTitle,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${session.formattedTime} • ${session.displayLocation}',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 12,
+                  ),
+                ),
+                if (session.speakers.isNotEmpty)
+                  Text(
+                    'With ${session.speakers.map((s) => s.fullName).join(', ')}',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _navigateToSessionDetails(session.sessionId),
+            icon: Icon(Icons.arrow_forward, color: Colors.white, size: 24),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  // Widget _buildLatestUpdateCard() {
+  //   if (_sessionsViewModel.isLoading.value) {
+  //     return _buildLoadingCard();
+  //   }
+  //
+  //   final allSessions = _sessionsViewModel.allSessions;
+  //
+  //   // Find sessions that are currently live based on time
+  //   final liveSessions = allSessions.where((session) => session.isCurrentlyLive).toList();
+  //
+  //   // Find today's upcoming sessions (not live, but today)
+  //   final todaySessions = allSessions.where((session) => session.isToday).toList();
+  //   final todayUpcomingSessions = todaySessions.where((session) =>
+  //   session.isUpcomingToday && !session.isCurrentlyLive
+  //   ).toList();
+  //
+  //   // Sort upcoming sessions by start time
+  //   todayUpcomingSessions.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+  //
+  //   return Column(
+  //     children: [
+  //       // Live Now Section
+  //       if (liveSessions.isNotEmpty)
+  //         _buildLiveNowCard(liveSessions.first),
+  //
+  //       // Next Session Section (show even if there's a live session)
+  //       if (todayUpcomingSessions.isNotEmpty)
+  //         _buildNextSessionCard(todayUpcomingSessions.first),
+  //
+  //       // If no live and no upcoming, show default
+  //       if (liveSessions.isEmpty && todayUpcomingSessions.isEmpty)
+  //         _buildDefaultUpdateCard(),
+  //     ],
+  //   );
+  // }
+
+  // Widget _buildLiveNowCard(SessionModel session) {
+  //   return Container(
+  //     width: double.infinity,
+  //     margin: const EdgeInsets.only(bottom: 12),
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: AppColors.primaryColor,
+  //       borderRadius: BorderRadius.circular(12),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.red.withOpacity(0.3),
+  //           blurRadius: 8,
+  //           spreadRadius: 1,
+  //         ),
+  //       ],
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         _buildBlinkingLiveIndicator(),
+  //         const SizedBox(width: 12),
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Row(
+  //                 children: [
+  //                   Container(
+  //                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //                     decoration: BoxDecoration(
+  //                       color: Colors.red,
+  //                       borderRadius: BorderRadius.circular(6),
+  //                     ),
+  //                     child: const Text(
+  //                       'LIVE NOW',
+  //                       style: TextStyle(
+  //                         color: Colors.white,
+  //                         fontSize: 10,
+  //                         fontWeight: FontWeight.bold,
+  //                       ),
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //               const SizedBox(height: 8),
+  //               Text(
+  //                 session.sessionTitle,
+  //                 style: const TextStyle(
+  //                   color: Colors.white,
+  //                   fontSize: 16,
+  //                   fontWeight: FontWeight.w600,
+  //                 ),
+  //                 maxLines: 2,
+  //                 overflow: TextOverflow.ellipsis,
+  //               ),
+  //               const SizedBox(height: 4),
+  //               Text(
+  //                 '${session.formattedTime} • ${session.displayLocation}',
+  //                 style: TextStyle(
+  //                   color: Colors.white.withOpacity(0.9),
+  //                   fontSize: 12,
+  //                 ),
+  //               ),
+  //               if (session.speakers.isNotEmpty)
+  //                 Text(
+  //                   'With ${session.speakers.map((s) => s.fullName).join(', ')}',
+  //                   style: TextStyle(
+  //                     color: Colors.white.withOpacity(0.8),
+  //                     fontSize: 11,
+  //                   ),
+  //                   maxLines: 1,
+  //                   overflow: TextOverflow.ellipsis,
+  //                 ),
+  //             ],
+  //           ),
+  //         ),
+  //         IconButton(
+  //           onPressed: () => _navigateToSessionDetails(session.sessionId),
+  //           icon: const Icon(Icons.arrow_forward, color: Colors.white, size: 24),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
+  Widget _buildNextSessionCard(SessionModel session) {
+    final minutesUntilStart = session.minutesUntilStart;
+    String timeInfo = session.formattedTime;
+
+    if (minutesUntilStart != null && minutesUntilStart > 0) {
+      final hours = (minutesUntilStart ~/ 60);
+      final minutes = minutesUntilStart % 60;
+
+      if (hours > 0) {
+        timeInfo = 'Starts in ${hours}h ${minutes}m • ${session.formattedTime}';
+      } else {
+        timeInfo = 'Starts in ${minutes}m • ${session.formattedTime}';
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue.shade50,
+            Colors.blue.shade100,
+          ],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue.shade200,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.upcoming, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'NEXT SESSION',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  session.sessionTitle,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  timeInfo,
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12,
+                  ),
+                ),
+                if (session.speakers.isNotEmpty)
+                  Text(
+                    'With ${session.speakers.map((s) => s.fullName).join(', ')}',
+                    style: const TextStyle(
+                      color: Colors.black45,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _navigateToSessionDetails(session.sessionId),
+            icon: Icon(Icons.arrow_forward, color: Colors.blue.shade700, size: 24),
+          ),
+        ],
+      ),
+    );
+  }
+  // Widget _buildLatestUpdateCard() {
+  //   if (_sessionsViewModel.isLoading.value) {
+  //     return _buildLoadingCard();
+  //   }
+  //
+  //   final allSessions = _sessionsViewModel.allSessions;
+  //
+  //   // Find sessions that are currently live based on time
+  //   final liveSessions = allSessions.where((session) => session.isCurrentlyLive).toList();
+  //
+  //   if (liveSessions.isNotEmpty) {
+  //     // Show the first live session
+  //     final liveSession = liveSessions.first;
+  //     return _buildSessionCard(
+  //       session: liveSession,
+  //       isLive: true,
+  //       title: 'Live Now',
+  //       onTap: () => _navigateToSessionDetails(liveSession.sessionId),
+  //     );
+  //   }
+  //
+  //   // If no live sessions, find the next session starting today
+  //   final todaySessions = allSessions.where((session) => session.isToday).toList();
+  //
+  //   if (todaySessions.isNotEmpty) {
+  //     // Sort by start time and find the next one
+  //     todaySessions.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+  //
+  //     for (var session in todaySessions) {
+  //       if (session.isUpcomingToday) {
+  //         return _buildSessionCard(
+  //           session: session,
+  //           isLive: false,
+  //           title: 'Upcoming',
+  //           onTap: () => _navigateToSessionDetails(session.sessionId),
+  //         );
+  //       }
+  //     }
+  //
+  //     // If no upcoming sessions today, show the first session of the day
+  //     final firstSession = todaySessions.first;
+  //     return _buildSessionCard(
+  //       session: firstSession,
+  //       isLive: false,
+  //       title: 'Today',
+  //       onTap: () => _navigateToSessionDetails(firstSession.sessionId),
+  //     );
+  //   }
+  //
+  //   // If nothing for today, find the next upcoming session (any day)
+  //   final upcomingSessions = allSessions.where((session) =>
+  //       session.startDateTime.isAfter(DateTime.now())
+  //   ).toList();
+  //
+  //   if (upcomingSessions.isNotEmpty) {
+  //     upcomingSessions.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+  //     final nextSession = upcomingSessions.first;
+  //     return _buildSessionCard(
+  //       session: nextSession,
+  //       isLive: false,
+  //       title: 'Coming Soon',
+  //       onTap: () => _navigateToSessionDetails(nextSession.sessionId),
+  //     );
+  //   }
+  //
+  //   return _buildDefaultUpdateCard();
+  // }
+
   Widget _buildTodaysScheduleSection() {
     if (_sessionsViewModel.isLoading.value) {
       return _buildLoadingSchedule();
@@ -469,23 +909,13 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
 
     final allSessions = _sessionsViewModel.allSessions;
 
-    // DEBUG: Print all sessions to see what we're working with
-    print('=== DEBUG: All Sessions Count: ${allSessions.length} ===');
-    for (var session in allSessions) {
-      print('Session ${session.sessionId}: isLive=${session.isLive}, title="${session.sessionTitle}"');
-    }
+    // Get today's sessions
+    final todaySessions = allSessions.where((session) => session.isToday).toList();
 
-    // Filter sessions that are not live (isLive: false)
-    final nonLiveSessions = allSessions.where((session) => session.isLive == false).toList();
+    // Filter out sessions that are currently live (they appear in the top card)
+    final nonLiveTodaySessions = todaySessions.where((session) => !session.isCurrentlyLive).toList();
 
-    // DEBUG: Print non-live sessions
-    print('=== DEBUG: Non-live Sessions Count: ${nonLiveSessions.length} ===');
-    for (var session in nonLiveSessions) {
-      print('Non-live Session ${session.sessionId}: title="${session.sessionTitle}"');
-    }
-
-    if (nonLiveSessions.isEmpty) {
-      print('=== DEBUG: No non-live sessions found, showing default message ===');
+    if (nonLiveTodaySessions.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -500,7 +930,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
               ),
               InkWell(
                 onTap: () {
-                  Get.to(() => ConferenceScheduleScreen());
+                  Get.to(() => TodaySessionsScreen());
                 },
                 child: const AppText(
                   text: 'View All',
@@ -517,9 +947,24 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
       );
     }
 
-    // Get the first non-live session
-    final nextNonLiveSession = nonLiveSessions.first;
-    print('=== DEBUG: Selected Session for Today\'s Schedule: ${nextNonLiveSession.sessionId} - "${nextNonLiveSession.sessionTitle}" ===');
+    // Sort by start time
+    nonLiveTodaySessions.sort((a, b) => a.startDateTime.compareTo(b.startDateTime));
+
+    // Find the next upcoming session for today
+    final now = DateTime.now();
+    SessionModel? nextSession;
+
+    for (var session in nonLiveTodaySessions) {
+      if (session.startDateTime.isAfter(now)) {
+        nextSession = session;
+        break;
+      }
+    }
+
+    // If no upcoming sessions but there are sessions today, show the last one
+    if (nextSession == null && nonLiveTodaySessions.isNotEmpty) {
+      nextSession = nonLiveTodaySessions.last;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -535,7 +980,7 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
             ),
             InkWell(
               onTap: () {
-                Get.to(() => ConferenceScheduleScreen());
+                Get.to(() => TodaySessionsScreen());
               },
               child: const AppText(
                 text: 'View All',
@@ -547,11 +992,95 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
           ],
         ),
         const SizedBox(height: 12),
-        _buildScheduleItem(nextNonLiveSession),
+        _buildScheduleItem(nextSession!),
       ],
     );
   }
 
+// Update _buildScheduleItem to show time until start for upcoming sessions
+  Widget _buildScheduleItem(SessionModel session) {
+    String timeInfo = '${session.formattedTime} • ${session.displayLocation}';
+
+    // Add countdown if session is upcoming today
+    if (session.minutesUntilStart != null && session.minutesUntilStart! > 0) {
+      final hours = (session.minutesUntilStart! ~/ 60);
+      final minutes = session.minutesUntilStart! % 60;
+
+      if (hours > 0) {
+        timeInfo = 'Starts in ${hours}h ${minutes}m • ${session.formattedTime}';
+      } else {
+        timeInfo = 'Starts in ${minutes}m • ${session.formattedTime}';
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightred,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: () => _navigateToSessionDetails(session.sessionId),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.mic, color: Colors.white, size: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  session.sessionTitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  timeInfo,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                  ),
+                ),
+                if (session.category.isNotEmpty)
+                  Text(
+                    session.category,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.black45,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => _navigateToSessionDetails(session.sessionId),
+            icon: const Icon(Icons.arrow_forward, color: AppColors.primaryColor, size: 22),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildNoSessionsItem() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -658,76 +1187,76 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
       ),
     );
   }
-
-  Widget _buildScheduleItem(SessionModel session) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.lightred,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          InkWell(
-            onTap: () => _navigateToSessionDetails(session.sessionId),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.mic, color: Colors.white, size: 20),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.sessionTitle,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${session.formattedTime} • ${session.location}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
-                ),
-                if (session.category.isNotEmpty)
-                  Text(
-                    session.category,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.black45,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => _navigateToSessionDetails(session.sessionId),
-            icon: const Icon(Icons.arrow_forward, color: AppColors.primaryColor, size: 22),
-          ),
-        ],
-      ),
-    );
-  }
+  //
+  // Widget _buildScheduleItem(SessionModel session) {
+  //   return Container(
+  //     padding: const EdgeInsets.all(16),
+  //     decoration: BoxDecoration(
+  //       color: AppColors.lightred,
+  //       borderRadius: BorderRadius.circular(12),
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: Colors.black.withOpacity(0.05),
+  //           blurRadius: 4,
+  //           offset: const Offset(0, 2),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Row(
+  //       children: [
+  //         InkWell(
+  //           onTap: () => _navigateToSessionDetails(session.sessionId),
+  //           child: Container(
+  //             width: 40,
+  //             height: 40,
+  //             decoration: BoxDecoration(
+  //               color: AppColors.primaryColor,
+  //               borderRadius: BorderRadius.circular(8),
+  //             ),
+  //             child: const Icon(Icons.mic, color: Colors.white, size: 20),
+  //           ),
+  //         ),
+  //         const SizedBox(width: 12),
+  //         Expanded(
+  //           child: Column(
+  //             crossAxisAlignment: CrossAxisAlignment.start,
+  //             children: [
+  //               Text(
+  //                 session.sessionTitle,
+  //                 style: const TextStyle(
+  //                   fontSize: 16,
+  //                   fontWeight: FontWeight.w600,
+  //                   color: Colors.black87,
+  //                 ),
+  //                 maxLines: 1,
+  //                 overflow: TextOverflow.ellipsis,
+  //               ),
+  //               Text(
+  //                 '${session.formattedTime} • ${session.location}',
+  //                 style: const TextStyle(
+  //                   fontSize: 12,
+  //                   color: Colors.black54,
+  //                 ),
+  //               ),
+  //               if (session.category.isNotEmpty)
+  //                 Text(
+  //                   session.category,
+  //                   style: const TextStyle(
+  //                     fontSize: 11,
+  //                     color: Colors.black45,
+  //                   ),
+  //                 ),
+  //             ],
+  //           ),
+  //         ),
+  //         IconButton(
+  //           onPressed: () => _navigateToSessionDetails(session.sessionId),
+  //           icon: const Icon(Icons.arrow_forward, color: AppColors.primaryColor, size: 22),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   Widget _buildBlinkingLiveIndicator() {
     return AnimatedBuilder(

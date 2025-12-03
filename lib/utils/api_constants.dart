@@ -1,8 +1,12 @@
 class ApiConstants {
   static const String baseUrl = "http://138.68.104.206:3000";
 
-
-
+// Add to your existing ApiConstants class
+  static String getEventDetails(int eventId) => '$baseUrl/event/$eventId';
+  static const String registrationTeam = '$baseUrl/admin/users/registrationteam';
+  // Admin endpoints
+  static const String participants = '$baseUrl/admin/users/participants';
+  static String participantById(int id) => '$baseUrl/admin/users/$id';
   static String getConnectedUsers(int userId) {
     return '$baseUrl/connections/all?userId=$userId';
   }
