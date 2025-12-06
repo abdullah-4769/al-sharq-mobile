@@ -18,7 +18,7 @@ class CsvParticipant {
 
   factory CsvParticipant.fromCsvRow(List<String> row) {
     return CsvParticipant(
-      name: row.length > 0 ? row[0].trim() : '',
+      name: row.isNotEmpty ? row[0].trim() : '',
       email: row.length > 1 ? row[1].trim() : '',
       phone: row.length > 2 ? row[2].trim() : '',
       role: row.length > 3 ? row[3].trim() : 'participant',

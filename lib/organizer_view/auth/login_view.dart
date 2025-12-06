@@ -61,7 +61,7 @@ class _LoginScreenState extends State<OrganizerLoginScreen> {
                   children: [
                     const SizedBox(height: 48),
                     AppText(
-                      text: "Sign in as organizer to",
+                      text: "Log in as organizer to",
                       fontWeight: FontWeight.w500,
                       fontSize: 20,
                     ),
@@ -162,7 +162,7 @@ class _LoginScreenState extends State<OrganizerLoginScreen> {
                       ],
                     ),
                     SizedBox(height: height * 0.016),
-                    CustomButton(text: 'Sign In', onPressed: (){
+                    CustomButton(text: 'Log In', onPressed: (){
                       Get.to(OrganizerDashboard());
                     }),
                     SizedBox(height: height * 0.036),

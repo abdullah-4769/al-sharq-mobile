@@ -62,7 +62,7 @@ class _SponserLoginScreenState extends State<SponserLoginScreen> {
                   children: [
                     const SizedBox(height: 48),
                     AppText(
-                      text: "Sign in as sponser",
+                      text: "Log in as sponser",
                       fontWeight: FontWeight.w500,
                       fontSize: 20,
                     ),
@@ -163,7 +163,7 @@ class _SponserLoginScreenState extends State<SponserLoginScreen> {
                       ],
                     ),
                     SizedBox(height: height * 0.016),
-                    CustomButton(text: 'Sign In', onPressed: (){
+                    CustomButton(text: 'Log In', onPressed: (){
                       Get.to(SponserDashboardScreen());
                     }),
                     SizedBox(height: height * 0.036),

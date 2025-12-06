@@ -34,6 +34,7 @@ import '../qr_code_scanner/qr_code_scanner_view.dart';
 import '../seesion_details_view/session_detail_view.dart';
 import '../speakers_view/speaker_view.dart';
 import '../sponser_exhibitors/sponser_exhibitors_view.dart';
+import 'event_registration_toggle_widget.dart';
 
 
 class HomeView extends StatefulWidget {
@@ -416,7 +417,8 @@ class _HomeViewState extends State<HomeView> with SingleTickerProviderStateMixin
                 SizedBox(height: 10.h,),
                 _buildProfileVisibilityItem(_profileVisibilityViewModel),
 
-
+                SizedBox(height: 10.h,),
+                Center(child: EventRegistrationToggleWidget()),
                 // const SizedBox(height: 12),
                 // InkWell(
                 //   onTap: (){

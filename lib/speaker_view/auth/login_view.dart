@@ -61,7 +61,7 @@ class _SpeakerLoginScreenState extends State<SpeakerLoginScreen> {
                   children: [
                     const SizedBox(height: 48),
                     AppText(
-                      text: "Sign in as speaker",
+                      text: "Log in as speaker",
                       fontWeight: FontWeight.w500,
                       fontSize: 20,
                     ),
@@ -162,7 +162,7 @@ class _SpeakerLoginScreenState extends State<SpeakerLoginScreen> {
                       ],
                     ),
                     SizedBox(height: height * 0.016),
-                    CustomButton(text: 'Sign In', onPressed: ()=>Get.to(SpeakerConferenceDashboardScreen())),
+                    CustomButton(text: 'Log In', onPressed: ()=>Get.to(SpeakerConferenceDashboardScreen())),
                     SizedBox(height: height * 0.036),
                     Row(
                       children: [

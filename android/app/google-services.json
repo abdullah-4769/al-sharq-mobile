@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "842443400568",
+    "project_id": "alsharq-76f89",
+    "storage_bucket": "alsharq-76f89.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:842443400568:android:c6b2f4b162f9650c46948d",
+        "android_client_info": {
+          "package_name": "com.eaglines.al_sharq_conference"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpjb_AYrhzoZ5xdM9TCJZsWTYrwV1Lja0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

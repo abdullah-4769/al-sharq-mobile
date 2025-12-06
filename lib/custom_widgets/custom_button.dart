@@ -1,5 +1,5 @@
-import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:flutter/material.dart';
+import '../app_colors/app_colors.dart';
 import 'app_text.dart';
 
 class CustomButton extends StatelessWidget {
@@ -7,62 +7,73 @@ class CustomButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Color? backgroundColor;
   final Color? textColor;
-  final double? height;
-  final bool isLoading;
-  final String? imagePath;
   final Color? borderColor;
   final double? borderWidth;
-  final Widget? icon; // ✅ new optional icon
-  final double? width; // ✅ NEW optional width field
+  final double? fontSize;
+  final FontWeight? fontWeight;
+  final double? borderRadius;
+  final EdgeInsetsGeometry? padding;
+  final double? height;
+  final double? width;
+  final bool isLoading;
+  final String? imagePath;
+  final Widget? icon;
+  final Widget? child; // Custom child for loader or other widgets
 
   const CustomButton({
-    super.key,
+    Key? key,
     required this.text,
-    this.onPressed,
+    required this.onPressed,
     this.backgroundColor,
     this.textColor,
-    this.height,
-    this.isLoading = false,
-    this.imagePath,
     this.borderColor,
     this.borderWidth,
+    this.fontSize,
+    this.fontWeight,
+    this.borderRadius,
+    this.padding,
+    this.height,
+    this.width,
+    this.isLoading = false,
+    this.imagePath,
     this.icon,
-    this.width, // ✅ NEW added here
-  });
+    this.child,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: height ?? 48,
-      width: width ?? double.infinity, // ✅ NEW width property
+      width: width ?? double.infinity,
       child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
+        onPressed: (isLoading || child != null) ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor ?? AppColors.primaryColor,
           foregroundColor: textColor ?? Colors.white,
+          padding: padding ?? EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(borderRadius ?? 8),
             side: borderColor != null
                 ? BorderSide(color: borderColor!, width: borderWidth ?? 1.0)
                 : BorderSide.none,
           ),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          disabledBackgroundColor: backgroundColor?.withOpacity(0.7) ?? AppColors.primaryColor.withOpacity(0.7),
         ),
-        child: isLoading
-            ? const SizedBox(
+        child: (isLoading || child != null)
+            ? (child ?? SizedBox(
           height: 20,
           width: 20,
           child: CircularProgressIndicator(
-            color: Colors.white,
+            color: textColor ?? Colors.white,
             strokeWidth: 2,
           ),
-        )
+        ))
             : Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ✅ optional icon takes priority
+            // Optional icon takes priority
             if (icon != null) ...[
               icon!,
               const SizedBox(width: 8),
@@ -76,8 +87,8 @@ class CustomButton extends StatelessWidget {
             ],
             AppText(
               text: text,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: fontSize ?? 16,
+              fontWeight: fontWeight ?? FontWeight.w600,
               color: textColor ?? Colors.white,
             ),
           ],

@@ -10,10 +10,10 @@ class DashboardResponseModel {
 
   factory DashboardResponseModel.fromJson(Map<String, dynamic> json) {
     return DashboardResponseModel(
-      dailyAttendance: (json['dailyAttendance'] as List)
+      dailyAttendance: (json['dailyAttendance'] as List? ?? [])
           .map((item) => DailyAttendance.fromJson(item))
           .toList(),
-      topSessions: (json['topSessions'] as List)
+      topSessions: (json['topSessions'] as List? ?? [])
           .map((item) => TopSession.fromJson(item))
           .toList(),
     );
@@ -31,8 +31,8 @@ class DailyAttendance {
 
   factory DailyAttendance.fromJson(Map<String, dynamic> json) {
     return DailyAttendance(
-      date: json['date'],
-      count: json['count'],
+      date: json['date'] ?? '',
+      count: json['count'] ?? 0,
     );
   }
 }
@@ -52,12 +52,20 @@ class TopSession {
 
   factory TopSession.fromJson(Map<String, dynamic> json) {
     return TopSession(
-      id: json['id'],
-      title: json['title'],
-      totalRegistrations: json['totalRegistrations'],
-      speakers: List<String>.from(json['speakers']),
+      id: json['id'] ?? 0,
+      title: json['title'] ?? 'Untitled Session',
+      totalRegistrations: json['totalRegistrations'] ?? 0,
+      speakers: (json['speakers'] as List? ?? [])
+          .map((e) => e.toString())
+          .toList(),
     );
   }
 
-  String get speakerNames => speakers.join(', ');
+  // Safe getter for speaker names
+  String get speakerNames {
+    if (speakers.isEmpty) {
+      return 'No speakers assigned';
+    }
+    return speakers.join(', ');
+  }
 }

@@ -216,7 +216,7 @@ class _SponserSignupScreenState extends State<SponserSignupScreen> {
                         GestureDetector(
                           onTap: () => Get.to(LoginScreen()),
                           child: AppText(
-                            text: "Sign In",
+                            text: "Log In",
                             color: AppColors.primaryColor,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,

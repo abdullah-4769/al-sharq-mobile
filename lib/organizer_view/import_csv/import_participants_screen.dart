@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:al_sharq_conference/custom_widgets/app_text.dart';
-import 'package:file_picker/file_picker.dart';
+
 import '../../view_model/organizer_viewmodels/import_participants_viewmodel.dart';
 
 class ImportParticipantsScreen extends StatefulWidget {
@@ -14,8 +15,15 @@ class ImportParticipantsScreen extends StatefulWidget {
 }
 
 class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
-  final ImportParticipantsViewModel _viewModel = Get.put(ImportParticipantsViewModel());
+  late ImportParticipantsViewModel _viewModel;
   final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = Get.put(ImportParticipantsViewModel());
+    print('DEBUG: ImportParticipantsScreen initialized');
+  }
 
   @override
   void dispose() {
@@ -32,14 +40,17 @@ class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
 
       if (result != null && result.files.single.path != null) {
         File file = File(result.files.single.path!);
+        print('DEBUG: File selected: ${file.path}');
         await _viewModel.parseCsvFile(file);
+      } else {
+        print('DEBUG: No file selected');
       }
     } catch (e) {
+      print('DEBUG: File picker error: $e');
       Get.snackbar(
         'Error',
-        'Failed to pick file: $e',
+        'Failed to pick file: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.1),
       );
     }
   }
@@ -116,7 +127,7 @@ class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
                             AppText(
                               text: _viewModel.csvFileName.value.isNotEmpty
                                   ? _viewModel.csvFileName.value
-                                  : 'dashboard_report (1).csv',
+                                  : 'dashboard_report.csv',
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color: Colors.black,
@@ -149,7 +160,7 @@ class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
                     child: ElevatedButton(
                       onPressed: _viewModel.isSending.value
                           ? null
-                          : _viewModel.sendInvitations,
+                          : () => _viewModel.sendInvitations(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         disabledBackgroundColor: Colors.grey,
@@ -231,7 +242,7 @@ class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -302,7 +313,6 @@ class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
                     text: 'Name, Email, Phone, Role',
                     fontSize: 11,
                     color: AppColors.darkgrey,
-                    //fontFamily: 'monospace',
                   ),
                 ],
               ),
@@ -330,7 +340,7 @@ class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
       itemCount: filteredParticipants.length,
       itemBuilder: (context, index) {
         final participant = filteredParticipants[index];
@@ -361,7 +371,9 @@ class _ImportParticipantsScreenState extends State<ImportParticipantsScreen> {
             radius: 24,
             backgroundColor: AppColors.primaryColor.withOpacity(0.1),
             child: AppText(
-              text: participant.name.isNotEmpty ? participant.name[0].toUpperCase() : 'P',
+              text: participant.name.isNotEmpty
+                  ? participant.name[0].toUpperCase()
+                  : 'P',
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: AppColors.primaryColor,

@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const SizedBox(height: 48),
                     AppText(
-                      text: "Sign in to",
+                      text: "Log in to",
                       fontWeight: FontWeight.w500,
                       fontSize: 20,
                     ),
@@ -170,7 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Login Button
                     Obx(() => CustomButton(
-                      text: _viewModel.isLoading.value ? 'Signing In...' : 'Sign In',
+                      text: _viewModel.isLoading.value ? 'Loging In...' : 'Log In',
                       onPressed: _viewModel.isLoading.value ? null : _login,
                       isLoading: _viewModel.isLoading.value,
                     )),

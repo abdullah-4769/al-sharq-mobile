@@ -296,13 +296,6 @@ class SharedPrefsHelper {
 }
 
 
-
-
-
-
-
-
-
 // import 'package:shared_preferences/shared_preferences.dart';
 //
 // class SharedPrefsHelper {
@@ -317,11 +310,55 @@ class SharedPrefsHelper {
 //   static const String keyRememberMe = 'remember_me';
 //   static const String keyLatestEventId = 'latest_event_id';
 //   static const String keySpeakerId = 'speaker_id';
-// static const String keyUserBio = 'user_bio';
+//   static const String keyUserBio = 'user_bio';
+//
+//   // ==================== PASSWORD RESET KEYS ====================
+//   static const String keyPassResetId = 'pass_reset_id';
+//   static const String keyPassResetRole = 'pass_reset_role';
+//   static const String keyPassResetEmail = 'pass_reset_email';
 //
 //   // Add these new methods for user image
 //   static const String _userImageKey = 'user_image';
-// // In your SharedPrefsHelper class, add this method:
+//
+//   // ==================== PASSWORD RESET METHODS ====================
+//   /// Save password reset ID
+//   static Future<void> savePassResetId(int id) async {
+//     await _saveInt(keyPassResetId, id);
+//   }
+//
+//   /// Get password reset ID
+//   static Future<int?> getPassResetId() async {
+//     return await _getInt(keyPassResetId);
+//   }
+//
+//   /// Save password reset role
+//   static Future<void> savePassResetRole(String role) async {
+//     await _saveString(keyPassResetRole, role);
+//   }
+//
+//   /// Get password reset role
+//   static Future<String?> getPassResetRole() async {
+//     return await _getString(keyPassResetRole);
+//   }
+//
+//   /// Save password reset email
+//   static Future<void> savePassResetEmail(String email) async {
+//     await _saveString(keyPassResetEmail, email);
+//   }
+//
+//   /// Get password reset email
+//   static Future<String?> getPassResetEmail() async {
+//     return await _getString(keyPassResetEmail);
+//   }
+//
+//   /// Clear password reset data
+//   static Future<void> clearPassResetData() async {
+//     await _remove(keyPassResetId);
+//     await _remove(keyPassResetRole);
+//     await _remove(keyPassResetEmail);
+//   }
+//
+//   // ==================== EXISTING METHODS ====================
 //   static Future<bool> isRegistrationTeam() async {
 //     final role = await getUserRole();
 //     return role == 'registrationteam';
@@ -340,6 +377,7 @@ class SharedPrefsHelper {
 //     final prefs = await SharedPreferences.getInstance();
 //     return prefs.getString('user_bio');
 //   }
+//
 //   static Future<bool> setUserImage(String imageUrl) async {
 //     final prefs = await SharedPreferences.getInstance();
 //     return await prefs.setString(_userImageKey, imageUrl);
@@ -410,7 +448,6 @@ class SharedPrefsHelper {
 //   static Future<void> saveLatestEventId(String? latestEventId) async {
 //     final prefs = await SharedPreferences.getInstance();
 //     if (latestEventId != null && latestEventId.isNotEmpty) {
-//       // Convert string to int before saving
 //       final eventId = int.tryParse(latestEventId);
 //       if (eventId != null) {
 //         await prefs.setInt('latest_event_id', eventId);
@@ -464,8 +501,6 @@ class SharedPrefsHelper {
 //     return await _getString(keyUserPhoto);
 //   }
 //
-//
-//
 //   static Future<bool?> getRememberMe() async {
 //     return await _getBool(keyRememberMe);
 //   }
@@ -487,6 +522,7 @@ class SharedPrefsHelper {
 //     await _remove(keyRememberMe);
 //     await _remove(keySpeakerId);
 //     await _remove(_userImageKey);
+//     await clearPassResetData();
 //   }
 //
 //   static Future<void> clearAll() async {
@@ -513,10 +549,10 @@ class SharedPrefsHelper {
 //       'latestEventId': await getLatestEventId(),
 //       'authToken': await getAuthToken(),
 //       'rememberMe': await getRememberMe() ?? false,
-//       'bio':await getUserBio(), // Add this line
+//       'bio': await getUserBio(),
 //       'speakerId': await getSpeakerId(),
 //       'userImage': await getUserImage(),
-//       'isRegistrationTeam': await isRegistrationTeam(), // Add this
+//       'isRegistrationTeam': await isRegistrationTeam(),
 //     };
 //   }
 //
@@ -556,3 +592,10 @@ class SharedPrefsHelper {
 //     await prefs.remove(key);
 //   }
 // }
+//
+//
+
+
+
+
+

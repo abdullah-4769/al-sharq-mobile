@@ -1,3 +1,4 @@
+// lib/qr_code/registration_team_scanner_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -5,9 +6,19 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:al_sharq_conference/app_colors/app_colors.dart';
 import 'package:al_sharq_conference/custom_widgets/app_text.dart';
 import '../qr_code/qr_generator_service.dart';
+import '../view_model/registration_team_viewmodels/session_check_viewmodel.dart';
 
 class RegistrationTeamScannerScreen extends StatefulWidget {
-  const RegistrationTeamScannerScreen({super.key});
+  final int? sessionId;
+  final String? sessionTitle;
+  final String? sessionTime;
+
+  const RegistrationTeamScannerScreen({
+    super.key,
+    this.sessionId,
+    this.sessionTitle,
+    this.sessionTime,
+  });
 
   @override
   State<RegistrationTeamScannerScreen> createState() => _RegistrationTeamScannerScreenState();
@@ -21,6 +32,7 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
   Map<String, dynamic>? scannedData;
   bool _isTorchOn = false;
   bool _isFrontCamera = false;
+  final SessionCheckViewModel checkViewModel = Get.put(SessionCheckViewModel());
 
   @override
   void initState() {
@@ -34,16 +46,22 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
     super.dispose();
   }
 
+
+
+// Update the _onDetect method to handle both modes properly:
   void _onDetect(BarcodeCapture capture) {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isNotEmpty) {
       final String? code = barcodes.first.rawValue;
       if (code != null) {
-        // Check if this is a new QR code or enough time has passed
+        print("=== QR CODE RAW DATA ===");
+        print(code);
+        print("=== END QR DATA ===");
+
         final now = DateTime.now();
         final shouldProcess = lastScannedCode != code ||
             lastScanTime == null ||
-            now.difference(lastScanTime!).inSeconds > 2;
+            now.difference(lastScanTime!).inSeconds > 3;
 
         if (shouldProcess && !isScanned) {
           setState(() {
@@ -54,12 +72,276 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
 
           // Parse QR data
           scannedData = QRGeneratorService.parseQRString(code);
+          print("=== PARSED QR DATA ===");
+          print(scannedData);
+          print("=== END PARSED DATA ===");
 
-          // Show details dialog
-          _showScannedDetails(scannedData);
+          if (scannedData != null && QRGeneratorService.isValidParticipantQR(scannedData)) {
+            if (widget.sessionId != null) {
+              // Session check mode - IMPORTANT: Check session registration
+              _checkSessionRegistration(scannedData!);
+            } else {
+              // General participant details mode
+              _showScannedDetails(scannedData);
+            }
+          } else {
+            _showErrorDialog('Invalid QR code format or missing required data');
+          }
         }
       }
     }
+  }
+
+// Add this method for session registration check:
+  Future<void> _checkSessionRegistration(Map<String, dynamic> participantData) async {
+    final userId = participantData['id'] ?? participantData['userId'];
+    final userIdInt = userId is int ? userId : int.tryParse(userId?.toString() ?? '');
+
+    if (userIdInt == null) {
+      _showErrorDialog('User ID not found in QR code');
+      return;
+    }
+
+    // Show loading dialog
+    Get.dialog(
+      const Center(
+        child: CircularProgressIndicator(),
+      ),
+      barrierDismissible: false,
+    );
+
+    try {
+      final result = await checkViewModel.checkSessionRegistration(
+        sessionId: widget.sessionId!,
+        userId: userIdInt,
+        context: context,
+      );
+
+      Get.back(); // Close loading dialog
+      _showRegistrationResult(participantData, result);
+    } catch (e) {
+      Get.back();
+      _showErrorDialog('Error checking registration: $e');
+    }
+  }
+
+  void _showRegistrationResult(Map<String, dynamic> participantData, Map<String, dynamic> result) {
+    final participantName = participantData['name']?.toString() ?? 'Unknown';
+    final participantEmail = participantData['email']?.toString() ?? 'No email';
+    final isRegistered = result['isRegistered'] ?? false;
+
+    Get.dialog(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isRegistered ? '✅ Registration Confirmed' : '⚠️ Not Registered',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isRegistered ? Colors.green : Colors.orange,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (widget.sessionTitle != null)
+              Text(
+                'Session: ${widget.sessionTitle}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Participant Info
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  children: [
+                    // Profile Image
+                    Container(
+                      width: 60,
+                      height: 60,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blue, width: 1),
+                      ),
+                      child: ClipOval(
+                        child: participantData['file'] != null && participantData['file'].toString().isNotEmpty
+                            ? Image.network(
+                          participantData['file'].toString(),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => _buildDefaultAvatar(),
+                        )
+                            : _buildDefaultAvatar(),
+                      ),
+                    ),
+
+                    Text(
+                      participantName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      participantEmail,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    if (participantData['role'] != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          participantData['role'].toString().toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Registration Status
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isRegistered ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isRegistered ? Colors.green : Colors.orange,
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isRegistered ? Icons.check_circle : Icons.warning,
+                          color: isRegistered ? Colors.green : Colors.orange,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            result['message'],
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: isRegistered ? Colors.green : Colors.orange,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Session ID: ${widget.sessionId}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    if (widget.sessionTime != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Time: ${widget.sessionTime}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Scan Time
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.grey),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Scanned: ${DateTime.now().toString().substring(0, 19)}',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() => isScanned = false);
+              Get.back();
+            },
+            child: const Text(
+              'Scan Another',
+              style: TextStyle(color: Colors.blue),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => isScanned = false);
+              Get.back();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text(
+              'Done',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showScannedDetails(Map<String, dynamic>? data) {
@@ -120,7 +402,6 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
             ),
           ),
 
-          // Name
           Text(
             data['name']?.toString() ?? 'Unknown',
             style: const TextStyle(
@@ -133,7 +414,6 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
 
           const SizedBox(height: 8),
 
-          // Email
           Text(
             data['email']?.toString() ?? 'No email',
             style: const TextStyle(
@@ -174,30 +454,15 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
             ),
             child: Column(
               children: [
-                // Email
+                _buildDetailItem('User ID', data['id']?.toString() ?? data['userId']?.toString() ?? 'Not available'),
+                const SizedBox(height: 12),
                 _buildDetailItem('Email', data['email']?.toString() ?? 'Not available'),
                 const SizedBox(height: 12),
-
-                // Role
                 _buildDetailItem('Role', data['role']?.toString() ?? 'Not available'),
-                const SizedBox(height: 12),
-
-                // Bio (if available)
-                if (data['bio'] != null && data['bio'].toString().isNotEmpty)
-                  Column(
-                    children: [
-                      _buildDetailItem('Bio', data['bio'].toString()),
-                      const SizedBox(height: 12),
-                    ],
-                  ),
-
-                // Profile Image Status
-                _buildDetailItem(
-                  'Profile Image',
-                  data['file'] != null && data['file'].toString().isNotEmpty ? 'Available' : 'Not available',
-                  isImageAvailable: data['file'] != null && data['file'].toString().isNotEmpty,
-                  imageUrl: data['file']?.toString(),
-                ),
+                if (data['bio'] != null && data['bio'].toString().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailItem('Bio', data['bio'].toString()),
+                ],
               ],
             ),
           ),
@@ -246,39 +511,7 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
         const SizedBox(width: 8),
         Expanded(
           flex: 3,
-          child: isImageAvailable && imageUrl != null
-              ? Row(
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: ClipOval(
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey[200],
-                      child: const Icon(Icons.image, size: 16, color: Colors.grey),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Available',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.green,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          )
-              : Text(
+          child: Text(
             value,
             style: TextStyle(
               fontSize: 13,
@@ -363,8 +596,28 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
     );
   }
 
+  void _showErrorDialog(String message) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() => isScanned = false);
+              Get.back();
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isSessionMode = widget.sessionId != null;
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -372,7 +625,31 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Get.back(),
         ),
-        title: const Text(
+        title: isSessionMode
+            ? Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Check Session Registration',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            if (widget.sessionTitle != null)
+              Text(
+                widget.sessionTitle!.length > 30
+                    ? '${widget.sessionTitle!.substring(0, 30)}...'
+                    : widget.sessionTitle!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.white70,
+                ),
+              ),
+          ],
+        )
+            : const Text(
           'Scan Participant QR',
           style: TextStyle(
             fontSize: 18,
@@ -411,13 +688,11 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
       ),
       body: Stack(
         children: [
-          // Camera view
           MobileScanner(
             controller: cameraController,
             onDetect: _onDetect,
           ),
 
-          // Overlay with scanning frame
           Container(
             decoration: ShapeDecoration(
               shape: _ScannerOverlayShape(
@@ -430,7 +705,44 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
             ),
           ),
 
-          // Instructions
+          if (isSessionMode)
+            Positioned(
+              top: 20,
+              left: 0,
+              right: 0,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primaryColor),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Scanning for: ${widget.sessionTitle ?? 'Session'}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Session ID: ${widget.sessionId}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           Positioned(
             bottom: 100,
             left: 0,
@@ -439,9 +751,11 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Text(
-                    'Align QR code within the frame',
-                    style: TextStyle(
+                  Text(
+                    isSessionMode
+                        ? 'Scan participant QR code'
+                        : 'Align QR code within the frame',
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.white,
                     ),
@@ -449,19 +763,38 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Scan participant QR code to view details',
+                    isSessionMode
+                        ? 'Checking registration for Session #${widget.sessionId}'
+                        : 'Scan participant QR code to view details',
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.white.withOpacity(0.8),
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  if (isSessionMode) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: const Text(
+                        'Registration Check Mode',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
 
-          // Processing overlay
           if (isScanned)
             Container(
               color: Colors.black54,
@@ -488,7 +821,6 @@ class _RegistrationTeamScannerScreenState extends State<RegistrationTeamScannerS
   }
 }
 
-// Custom scanner overlay
 class _ScannerOverlayShape extends ShapeBorder {
   final Color borderColor;
   final double borderWidth;
@@ -532,9 +864,7 @@ class _ScannerOverlayShape extends ShapeBorder {
   @override
   void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
     final width = rect.width;
-    final borderWidthSize = width / 2;
     final height = rect.height;
-    final borderOffset = borderWidth / 2;
     final mPath = Path()
       ..fillType = PathFillType.evenOdd
       ..addRect(Rect.fromLTWH(0, 0, width, height))

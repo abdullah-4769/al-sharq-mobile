@@ -1,53 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../app_colors/app_colors.dart';
 import '../../custom_widgets/app_text.dart';
 import '../../custom_widgets/custom_button.dart';
+import '../../data/request_models/announcement_model/announcement_model.dart';
+import '../../view_model/organizer_viewmodels/announcement_viewmodel.dart';
 import '../add_announcement/add_announcement.dart';
 
-
-
-class ManageAnnouncementsScreen extends StatefulWidget {
-  @override
-  _ManageAnnouncementsScreenState createState() => _ManageAnnouncementsScreenState();
-}
-
-class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
-  final List<AnnouncementModel> announcements = [
-    AnnouncementModel(
-      id: '1',
-      title: 'Keynote Session Reminder',
-      message: "Don't miss today's keynote at 10:00 AM in Hall A. Ahmed Hassan will present the latest insights on digital transformation.",
-      date: 'Feb 15, 9:30 AM',
-      audience: 'All Participants',
-      isScheduled: false,
-    ),
-    AnnouncementModel(
-      id: '2',
-      title: 'Keynote Session Reminder',
-      message: "Don't miss today's keynote at 10:00 AM in Hall A. Dr. Ahmed Hassan will present the latest insights on digital transformation.",
-      date: 'Feb 15, 9:30 AM',
-      audience: 'All Participants',
-      isScheduled: true,
-    ),
-    AnnouncementModel(
-      id: '3',
-      title: 'Keynote Session Reminder',
-      message: "Don't miss today's keynote at 10:00 AM in Hall A. Dr. Ahmed Hassan will present the latest insights on digital transformation.",
-      date: 'Feb 15, 9:30 AM',
-      audience: 'All Participants',
-      isScheduled: true,
-    ),
-    AnnouncementModel(
-      id: '4',
-      title: 'Keynote Session Reminder',
-      message: "Don't miss today's keynote at 10:00 AM in Hall A. Dr. Ahmed Hassan will present the latest insights on digital transformation.",
-      date: 'Feb 15, 9:30 AM',
-      audience: 'All Participants',
-      isScheduled: true,
-    ),
-  ];
+class ManageAnnouncementsScreen extends StatelessWidget {
+  final AnnouncementViewModel viewModel = Get.put(AnnouncementViewModel());
 
   @override
   Widget build(BuildContext context) {
@@ -67,86 +28,165 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
           color: AppColors.darkgrey,
         ),
         centerTitle: true,
-        actions: [
-          Container(
-            margin: EdgeInsets.only(right: 16),
-            padding: EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.tune, color: AppColors.primaryColor, size: 20),
-          ),
-        ],
       ),
-      body: Column(
-        children: [
-          // Search Bar
-          Container(
-            margin: EdgeInsets.all(16),
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search announcements...',
-                border: InputBorder.none,
-                icon: Icon(Icons.search, color: AppColors.lightGrey),
+      body: Obx(() {
+        if (viewModel.isLoading.value && viewModel.allAnnouncements.isEmpty) {
+          return Center(child: CircularProgressIndicator());
+        }
+
+        return RefreshIndicator(
+          onRefresh: viewModel.fetchAnnouncements,
+          child: Column(
+            children: [
+              // Search Bar
+              Container(
+                margin: EdgeInsets.all(16),
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: TextField(
+                  onChanged: viewModel.setSearchQuery,
+                  decoration: InputDecoration(
+                    hintText: 'Search announcements...',
+                    border: InputBorder.none,
+                    icon: Icon(Icons.search, color: AppColors.lightGrey),
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // Stats Row
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard('Total Sent', '24', Icons.send, AppColors.chartColor3),
+              // Stats Row
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Sent',
+                        '${viewModel.totalSent}',
+                        Icons.check_circle,
+                        AppColors.successColor,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Scheduled',
+                        '${viewModel.totalScheduled}',
+                        Icons.schedule,
+                        AppColors.warningColor,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Draft',
+                        '${viewModel.totalDrafts}',
+                        Icons.drafts,
+                        AppColors.primaryColor,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard('Scheduled', '5', Icons.schedule, AppColors.warningColor),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatCard('Drafts', '12', Icons.drafts, AppColors.lightGrey),
-                ),
-              ],
-            ),
-          ),
-
-          SizedBox(height: 16),
-
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 16),
-            child: CustomButton(
-              text: 'Add New Announcement',
-              onPressed: () => _showAddAnnouncementDialog(),
-              backgroundColor: AppColors.primaryColor,
-            ),
-          ),
-
-          SizedBox(height: 16),
-
-          // Announcements List
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.symmetric(horizontal: 16),
-              child: ListView.builder(
-                itemCount: announcements.length,
-                itemBuilder: (context, index) {
-                  return _buildAnnouncementCard(announcements[index]);
-                },
               ),
-            ),
+
+              SizedBox(height: 16),
+
+              // Filter Tabs
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('All', 'all'),
+                      SizedBox(width: 8),
+                      _buildFilterChip('Sent', 'sent'),
+                      SizedBox(width: 8),
+                      _buildFilterChip('Scheduled', 'scheduled'),
+                      SizedBox(width: 8),
+                      _buildFilterChip('Draft', 'draft'),
+                    ],
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 16),
+
+              // Add New Button
+              Container(
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                child: CustomButton(
+                  text: 'Add New Announcement',
+                  onPressed: () {
+                    Get.to(() => AddAnnouncementScreen());
+                  },
+                  backgroundColor: AppColors.primaryColor,
+                ),
+              ),
+
+              SizedBox(height: 16),
+
+              // Announcements List
+              Expanded(
+                child: viewModel.filteredAnnouncements.isEmpty
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.announcement_outlined, size: 64, color: AppColors.lightGrey),
+                      SizedBox(height: 16),
+                      AppText(
+                        text: 'No announcements found',
+                        fontSize: 16,
+                        color: AppColors.lightGrey,
+                      ),
+                    ],
+                  ),
+                )
+                    : Container(
+                  margin: EdgeInsets.symmetric(horizontal: 16),
+                  child: ListView.builder(
+                    itemCount: viewModel.filteredAnnouncements.length,
+                    itemBuilder: (context, index) {
+                      return _buildAnnouncementCard(
+                        viewModel.filteredAnnouncements[index],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      }),
     );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    return Obx(() {
+      final isSelected = viewModel.selectedFilter.value == value;
+      return GestureDetector(
+        onTap: () => viewModel.setFilter(value),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryColor : AppColors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColors.primaryColor : Colors.grey[300]!,
+            ),
+          ),
+          child: AppText(
+            text: label,
+            fontSize: 14,
+            color: isSelected ? AppColors.white : AppColors.darkgrey,
+          ),
+        ),
+      );
+    });
   }
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
@@ -166,18 +206,13 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
       ),
       child: Column(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-            ],
+          Container(
+            padding: EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: color, size: 16),
           ),
           SizedBox(height: 8),
           AppText(
@@ -197,6 +232,24 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
   }
 
   Widget _buildAnnouncementCard(AnnouncementModel announcement) {
+    final statusColor = announcement.isSent
+        ? AppColors.successColor
+        : announcement.scheduledAt != null
+        ? AppColors.warningColor
+        : AppColors.primaryColor;
+
+    final statusText = announcement.isSent
+        ? 'Sent'
+        : announcement.scheduledAt != null
+        ? 'Scheduled'
+        : 'Draft';
+
+    final statusIcon = announcement.isSent
+        ? Icons.check_circle
+        : announcement.scheduledAt != null
+        ? Icons.schedule
+        : Icons.drafts;
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(16),
@@ -229,24 +282,18 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: announcement.isScheduled
-                      ? AppColors.warningColor.withOpacity(0.1)
-                      : AppColors.successColor.withOpacity(0.1),
+                  color: statusColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      announcement.isScheduled ? Icons.schedule : Icons.check_circle,
-                      size: 12,
-                      color: announcement.isScheduled ? AppColors.warningColor : AppColors.successColor,
-                    ),
+                    Icon(statusIcon, size: 12, color: statusColor),
                     SizedBox(width: 4),
                     AppText(
-                      text: announcement.isScheduled ? 'Scheduled' : 'Sent',
+                      text: statusText,
                       fontSize: 10,
-                      color: announcement.isScheduled ? AppColors.warningColor : AppColors.successColor,
+                      color: statusColor,
                     ),
                   ],
                 ),
@@ -262,6 +309,7 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
             fontSize: 14,
             color: AppColors.lightGrey,
             textAlign: TextAlign.left,
+            maxLines: 3,
           ),
 
           SizedBox(height: 12),
@@ -271,70 +319,83 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
             children: [
               Icon(Icons.access_time, size: 14, color: AppColors.lightGrey),
               SizedBox(width: 4),
-              AppText(
-                text: announcement.date,
-                fontSize: 12,
-                color: AppColors.lightGrey,
+              Expanded(
+                child: AppText(
+                  text: announcement.formattedDate,
+                  fontSize: 12,
+                  color: AppColors.lightGrey,
+                ),
               ),
-              SizedBox(width: 16),
+              SizedBox(width: 8),
               Icon(Icons.people, size: 14, color: AppColors.lightGrey),
               SizedBox(width: 4),
-              AppText(
-                text: announcement.audience,
-                fontSize: 12,
-                color: AppColors.lightGrey,
+              Expanded(
+                child: AppText(
+                  text: announcement.audienceDisplay,
+                  fontSize: 12,
+                  color: AppColors.lightGrey,
+                ),
               ),
             ],
           ),
 
-          SizedBox(height: 16),
-         /* OutlinedButton(
-            onPressed: () => _viewDetails(announcement),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppColors.primaryColor),
-              shape: RoundedRectangleBorder(
+          // Show scheduled time if scheduled
+          if (announcement.scheduledAt != null && !announcement.isSent) ...[
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.warningColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.warningColor.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.access_alarm, size: 14, color: AppColors.warningColor),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: AppText(
+                      text: 'Sends ${_formatScheduledTime(announcement.scheduledAt!)}',
+                      fontSize: 12,
+                      color: AppColors.warningColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: AppText(
-              text: 'View Details',
-              fontSize: 14,
-              color: AppColors.primaryColor,
-            ),
-          ),*/
-          CustomButton(
-            borderColor: AppColors.containerGreyColor, // optional
+          ],
 
-            backgroundColor: AppColors.lightGreyColor,
-            textColor: AppColors.blackColor,
-            text: "View Details", onPressed: () => _viewDetails(announcement)
-
-
-            ,),
-          SizedBox(height: 12),
+          SizedBox(height: 16),
 
           // Action Buttons
           Row(
             children: [
-              SizedBox(width: 12),
               Expanded(
-                flex: 5,
                 child: CustomButton(
-                  onPressed: () => _editAnnouncement(announcement),
+                  onPressed: announcement.isSent
+                      ? null
+                      : () {
+                    Get.to(() => AddAnnouncementScreen(
+                      announcement: announcement,
+                    ));
+                  },
                   text: "Edit",
+                  backgroundColor: announcement.isSent
+                      ? AppColors.lightGrey
+                      : AppColors.primaryColor,
                 ),
               ),
               SizedBox(width: 12),
               Expanded(
-                flex: 5,
                 child: CustomButton(
                   backgroundColor: AppColors.lightGreyColor,
-                  borderColor: AppColors.primaryColor,
-                  textColor: AppColors.blackColor,
-                  text: "Delete", onPressed: () => _deleteAnnouncement(announcement),
+                  borderColor: AppColors.errorColor,
+                  textColor: AppColors.errorColor,
+                  text: "Delete",
+                  onPressed: () => _deleteAnnouncement(announcement),
                 ),
-              )
-
+              ),
             ],
           ),
         ],
@@ -342,56 +403,61 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
     );
   }
 
-  void _showAddAnnouncementDialog() {
-    Get.to(() => AddAnnouncementScreen());
-  }
+  String _formatScheduledTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = dateTime.difference(now);
 
-  void _viewDetails(AnnouncementModel announcement) {
-    Get.dialog(
-      AlertDialog(
-        title: AppText(
-          text: 'Announcement Details',
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppText(
-              text: 'Title: ${announcement.title}',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            SizedBox(height: 8),
-            AppText(
-              text: 'Message: ${announcement.message}',
-              fontSize: 14,
-            ),
-            SizedBox(height: 8),
-            AppText(
-              text: 'Date: ${announcement.date}',
-              fontSize: 14,
-            ),
-            SizedBox(height: 8),
-            AppText(
-              text: 'Audience: ${announcement.audience}',
-              fontSize: 14,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: AppText(text: 'Close', color: AppColors.primaryColor),
-          ),
-        ],
-      ),
-    );
-  }
+    // If in the past
+    if (difference.isNegative) {
+      return 'overdue';
+    }
 
-  void _editAnnouncement(AnnouncementModel announcement) {
-    Get.to(() => AddAnnouncementScreen());
+    // If less than 1 hour
+    if (difference.inMinutes < 60) {
+      final minutes = difference.inMinutes;
+      return 'in $minutes ${minutes == 1 ? 'minute' : 'minutes'}';
+    }
+
+    // If less than 24 hours
+    if (difference.inHours < 24) {
+      final hours = difference.inHours;
+      final minutes = difference.inMinutes % 60;
+      if (minutes > 0) {
+        return 'in $hours ${hours == 1 ? 'hour' : 'hours'} and $minutes ${minutes == 1 ? 'minute' : 'minutes'}';
+      }
+      return 'in $hours ${hours == 1 ? 'hour' : 'hours'}';
+    }
+
+    // If less than 7 days
+    if (difference.inDays < 7) {
+      final days = difference.inDays;
+      final hours = difference.inHours % 24;
+      if (hours > 0) {
+        return 'in $days ${days == 1 ? 'day' : 'days'} and $hours ${hours == 1 ? 'hour' : 'hours'}';
+      }
+      return 'in $days ${days == 1 ? 'day' : 'days'}';
+    }
+
+    // For dates far in the future, show the actual date
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final month = months[dateTime.month - 1];
+    final day = dateTime.day;
+    final hour = dateTime.hour.toString().padLeft(2, '0');
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+
+    // Check if it's today
+    if (dateTime.year == now.year && dateTime.month == now.month && dateTime.day == now.day) {
+      return 'today at $hour:$minute';
+    }
+
+    // Check if it's tomorrow
+    final tomorrow = now.add(Duration(days: 1));
+    if (dateTime.year == tomorrow.year && dateTime.month == tomorrow.month && dateTime.day == tomorrow.day) {
+      return 'tomorrow at $hour:$minute';
+    }
+
+    // Show full date
+    return 'on $month $day at $hour:$minute';
   }
 
   void _deleteAnnouncement(AnnouncementModel announcement) {
@@ -413,13 +479,10 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
           ),
           TextButton(
             onPressed: () {
-              setState(() {
-                announcements.remove(announcement);
-              });
               Get.back();
-              Get.snackbar('Success', 'Announcement deleted successfully!',
-                  backgroundColor: AppColors.successColor.withOpacity(0.1),
-                  colorText: AppColors.successColor);
+              if (announcement.id != null) {
+                viewModel.deleteAnnouncement(announcement.id!);
+              }
             },
             child: AppText(text: 'Delete', color: AppColors.errorColor),
           ),
@@ -428,22 +491,3 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
     );
   }
 }
-
-class AnnouncementModel {
-  final String id;
-  final String title;
-  final String message;
-  final String date;
-  final String audience;
-  final bool isScheduled;
-
-  AnnouncementModel({
-    required this.id,
-    required this.title,
-    required this.message,
-    required this.date,
-    required this.audience,
-    required this.isScheduled,
-  });
-}
-

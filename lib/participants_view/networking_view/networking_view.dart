@@ -11,11 +11,15 @@ import '../../custom_widgets/custom_text_field.dart';
 import '../../../images/images.dart';
 // Import the new viewmodels
 import '../../data/request_models/chats_model/participant_chat_model.dart';
+import '../../utils/shared_preference.dart';
 import '../../view_model/participant_viewmodel/participant_networking_viewmodels/participant_connected_users_viewmodel.dart';
 import '../../view_model/participant_viewmodel/participant_networking_viewmodels/participant_connection_request_handle_viewmodel.dart';
 import '../../view_model/participant_viewmodel/participant_networking_viewmodels/participant_pending_connection_show_viewmodel.dart';
 // Import the chat viewmodel
 import '../../view_model/participant_viewmodel/participant_chat_viewmodels/participant_chat_viewmodel.dart';
+// Import directory viewmodels
+import '../../view_model/seeing_opted_user_viewmodel.dart';
+import '../../view_model/connection_request_send_viewmodel.dart';
 
 // Person class definition (updated for dynamic data)
 class Person {
@@ -58,11 +62,13 @@ class _NetworkingScreenState extends State<NetworkingScreen>
   final pendingConnectionsViewModel = Get.put(ParticipantPendingConnectionShowViewModel());
   final connectionRequestViewModel = Get.put(ParticipantConnectionRequestHandleViewModel());
   final chatViewModel = Get.put(ParticipantChatViewModel());
+  final directoryViewModel = Get.put(SeeingOptedUserViewModel());
+  final connectionSendViewModel = Get.put(ConnectionRequestSendViewModel());
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
 
     // Fetch data when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -73,8 +79,22 @@ class _NetworkingScreenState extends State<NetworkingScreen>
   void _fetchData() {
     connectedUsersViewModel.fetchConnectedUsers(context);
     pendingConnectionsViewModel.fetchPendingConnections(context);
+    // Fetch directory users
+    _fetchDirectoryUsers();
     // Also fetch connections for chat
     chatViewModel.fetchConnections();
+  }
+
+  Future<void> _fetchDirectoryUsers() async {
+    try {
+      // Get event ID from shared preferences and load users
+      final eventId = await SharedPrefsHelper.getLatestEventId();
+      if (eventId != null) {
+        await directoryViewModel.loadOptedInUsers(eventId);
+      }
+    } catch (e) {
+      print('Error fetching directory users: $e');
+    }
   }
 
   @override
@@ -84,8 +104,25 @@ class _NetworkingScreenState extends State<NetworkingScreen>
     super.dispose();
   }
 
-  // Convert API data to Person objects
+  // Convert Directory users to Person objects - FIXED: No email field
   List<Person> get _directoryPeople {
+    final directoryUsers = directoryViewModel.users;
+
+    return directoryUsers.map((user) {
+      return Person(
+        id: user.id,
+        name: user.name,
+        title: user.role,
+        organization: user.role, // Use role as organization since email is not available
+        description: 'Available for networking',
+        imageUrl: user.file ?? _getUserImageUrl(null),
+        status: 'connect', // Default status for directory users
+      );
+    }).toList();
+  }
+
+  // Convert API data to Person objects for pending connections
+  List<Person> get _pendingPeople {
     final pendingConnections = pendingConnectionsViewModel.pendingConnections;
 
     return pendingConnections.map((connection) {
@@ -165,7 +202,17 @@ class _NetworkingScreenState extends State<NetworkingScreen>
                     controller: _searchController,
                     suffixIcon: Icons.search,
                     onChanged: (value) {
-                      connectedUsersViewModel.search(value);
+                      // Apply search to all tabs based on current tab
+                      if (_tabController.index == 0) {
+                        // Search in directory - handled locally via setState
+                        setState(() {});
+                      } else if (_tabController.index == 1) {
+                        // Search in pending connections
+                        // Currently no search in pending connections
+                      } else if (_tabController.index == 2) {
+                        // Search in connected users
+                        connectedUsersViewModel.search(value);
+                      }
                     },
                   ),
                 ),
@@ -236,7 +283,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 
           SizedBox(height: 8),
 
-          // Custom Tab Bar with better design
+          // Custom Tab Bar with better design (now 3 tabs)
           Container(
             margin: EdgeInsets.symmetric(horizontal: 16),
             padding: EdgeInsets.all(4),
@@ -261,14 +308,14 @@ class _NetworkingScreenState extends State<NetworkingScreen>
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
-                        child: Obx(() => AppText(
-                          text: 'Requests (${pendingConnectionsViewModel.pendingConnections.length})',
+                        child: AppText(
+                          text: 'Directory',
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: _tabController.index == 0
                               ? AppColors.whiteColor
                               : AppColors.darkgrey,
-                        )),
+                        ),
                       ),
                     ),
                   ),
@@ -289,10 +336,37 @@ class _NetworkingScreenState extends State<NetworkingScreen>
                       ),
                       child: Center(
                         child: Obx(() => AppText(
-                          text: 'My Connections (${connectedUsersViewModel.filteredConnectedUsers.length})',
+                          text: 'Requests (${pendingConnectionsViewModel.pendingConnections.length})',
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: _tabController.index == 1
+                              ? AppColors.whiteColor
+                              : AppColors.darkgrey,
+                        )),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      _tabController.animateTo(2);
+                      setState(() {});
+                    },
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: _tabController.index == 2
+                            ? AppColors.primaryColor
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Obx(() => AppText(
+                          text: 'Connections (${connectedUsersViewModel.filteredConnectedUsers.length})',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _tabController.index == 2
                               ? AppColors.whiteColor
                               : AppColors.darkgrey,
                         )),
@@ -306,26 +380,51 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 
           SizedBox(height: 16),
 
-          // Speaker Count
+          // User Count (dynamic based on tab)
           Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Obx(() => AppText(
-              text: '${connectedUsersViewModel.filteredConnectedUsers.length} Connected Users',
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.darkgrey,
-            )),
+            child: Builder(
+              builder: (context) {
+                if (_tabController.index == 0) {
+                  // Directory tab
+                  final displayedDirectoryPeople = _getFilteredDirectoryPeople();
+                  return AppText(
+                    text: '${displayedDirectoryPeople.length} Participants',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkgrey,
+                  );
+                } else if (_tabController.index == 1) {
+                  // Requests tab
+                  return Obx(() => AppText(
+                    text: '${pendingConnectionsViewModel.pendingConnections.length} Pending Requests',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkgrey,
+                  ));
+                } else {
+                  // Connections tab
+                  return Obx(() => AppText(
+                    text: '${connectedUsersViewModel.filteredConnectedUsers.length} Connected Users',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkgrey,
+                  ));
+                }
+              },
+            ),
           ),
 
           SizedBox(height: 8),
 
-          // Tab View
+          // Tab View (now 3 tabs)
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
                 _buildDirectoryTab(),
+                _buildRequestsTab(),
                 _buildConnectionsTab(),
               ],
             ),
@@ -335,7 +434,65 @@ class _NetworkingScreenState extends State<NetworkingScreen>
     );
   }
 
+  // Helper method to filter directory people based on search
+  List<Person> _getFilteredDirectoryPeople() {
+    final allPeople = _directoryPeople;
+    final searchQuery = _searchController.text.trim();
+
+    if (searchQuery.isEmpty) {
+      return allPeople;
+    }
+
+    return allPeople.where((person) =>
+    person.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+        person.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
+        person.organization.toLowerCase().contains(searchQuery.toLowerCase())
+    ).toList();
+  }
+
   Widget _buildDirectoryTab() {
+    return Obx(() {
+      if (directoryViewModel.isLoading.value) {
+        return Center(child: CircularProgressIndicator());
+      }
+
+      if (directoryViewModel.errorMessage.value.isNotEmpty) {
+        return Center(
+          child: Text(directoryViewModel.errorMessage.value),
+        );
+      }
+
+      final people = _getFilteredDirectoryPeople();
+
+      if (people.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.people_outline, size: 64, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                _searchController.text.isEmpty
+                    ? 'No participants found'
+                    : 'No participants match your search',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return ListView.builder(
+        padding: EdgeInsets.all(16),
+        itemCount: people.length,
+        itemBuilder: (context, index) {
+          return _buildDirectoryPersonCard(people[index]);
+        },
+      );
+    });
+  }
+
+  Widget _buildRequestsTab() {
     return Obx(() {
       if (pendingConnectionsViewModel.isLoading.value) {
         return Center(child: CircularProgressIndicator());
@@ -347,7 +504,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
         );
       }
 
-      final people = _directoryPeople;
+      final people = _pendingPeople;
 
       if (people.isEmpty) {
         return Center(
@@ -415,12 +572,40 @@ class _NetworkingScreenState extends State<NetworkingScreen>
     });
   }
 
+  Future<void> _sendConnectionRequestToDirectoryUser(Person person) async {
+    final result = await connectionSendViewModel.sendConnectionRequest(person.id);
+
+    Color backgroundColor;
+    switch (result['type']) {
+      case 'success':
+        backgroundColor = AppColors.successColor ?? Colors.green;
+        break;
+      case 'warning':
+        backgroundColor = Colors.orange;
+        break;
+      case 'info':
+        backgroundColor = Colors.blue;
+        break;
+      default:
+        backgroundColor = Colors.red;
+    }
+
+    Get.snackbar(
+      result['success'] ? 'Success' : 'Notice',
+      result['message'],
+      backgroundColor: backgroundColor,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 3),
+      snackPosition: SnackPosition.BOTTOM,
+    );
+  }
+
   void _startChat(Person person) {
     // Convert Person to ChatUser for the chat system
     final chatUser = ChatUser(
       id: person.id,
       name: person.name,
-      email: person.organization,
+      email: person.organization, // This will be the role for directory users
       role: person.title,
       displayImage: person.imageUrl,
     );
@@ -455,6 +640,107 @@ class _NetworkingScreenState extends State<NetworkingScreen>
         chatViewModel.fetchConnections();
       }
     }
+  }
+
+  Widget _buildDirectoryPersonCard(Person person) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.whiteColor,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Profile Image with error handling
+              CircleAvatar(
+                radius: 25,
+                backgroundImage: NetworkImage(person.imageUrl),
+                onBackgroundImageError: (exception, stackTrace) {
+                  // Use default avatar if image fails to load
+                },
+                child: person.imageUrl.isEmpty || !person.imageUrl.startsWith('http')
+                    ? Icon(Icons.person, color: Colors.white)
+                    : null,
+              ),
+              SizedBox(width: 12),
+              // Person Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      text: person.name,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.blackColor,
+                    ),
+                    SizedBox(height: 2),
+                    AppText(
+                      text: person.title,
+                      fontSize: 14,
+                      color: AppColors.darkgrey,
+                    ),
+                    AppText(
+                      text: person.organization,
+                      fontSize: 14,
+                      color: AppColors.darkgrey,
+                    ),
+                  ],
+                ),
+              ),
+              // Connect Button for directory users
+              Obx(() {
+                final isSending = connectionSendViewModel.isSendingRequest(person.id);
+                return Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.primaryColor),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: isSending
+                      ? SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.primaryColor,
+                    ),
+                  )
+                      : GestureDetector(
+                    onTap: () => _sendConnectionRequestToDirectoryUser(person),
+                    child: AppText(
+                      text: 'Connect',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.primaryColor,
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          SizedBox(height: 12),
+          // Description
+          AppText(
+            text: person.description,
+            fontSize: 12,
+            color: AppColors.darkgrey,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildPersonCard(Person person) {
@@ -709,24 +995,24 @@ class _NetworkingScreenState extends State<NetworkingScreen>
   }
 }
 
-
-
 // import 'package:al_sharq_conference/custom_widgets/custom_drawer.dart';
 // import 'package:al_sharq_conference/participants_view/forum_chat/chat_list_view.dart';
 // import 'package:al_sharq_conference/participants_view/forum_chat/forum_chat.dart';
 // import 'package:al_sharq_conference/participants_view/message_view/message_view.dart';
 // import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:get/get_core/src/get_main.dart';
 //
 // import '../../app_colors/app_colors.dart';
 // import '../../custom_widgets/app_text.dart';
 // import '../../custom_widgets/custom_text_field.dart';
 // import '../../../images/images.dart';
 // // Import the new viewmodels
+// import '../../data/request_models/chats_model/participant_chat_model.dart';
 // import '../../view_model/participant_viewmodel/participant_networking_viewmodels/participant_connected_users_viewmodel.dart';
 // import '../../view_model/participant_viewmodel/participant_networking_viewmodels/participant_connection_request_handle_viewmodel.dart';
 // import '../../view_model/participant_viewmodel/participant_networking_viewmodels/participant_pending_connection_show_viewmodel.dart';
+// // Import the chat viewmodel
+// import '../../view_model/participant_viewmodel/participant_chat_viewmodels/participant_chat_viewmodel.dart';
 //
 // // Person class definition (updated for dynamic data)
 // class Person {
@@ -753,48 +1039,6 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //   });
 // }
 //
-// // Chat Manager to handle global chat state
-// class ChatManager {
-//   static final ChatManager _instance = ChatManager._internal();
-//   factory ChatManager() => _instance;
-//   ChatManager._internal();
-//
-//   List<ChatContact> _chatContacts = [];
-//   List<ChatContact> get chatContacts => _chatContacts;
-//
-//   void addOrUpdateChat(Person person) {
-//     final existingIndex = _chatContacts.indexWhere((contact) => contact.name == person.name);
-//
-//     if (existingIndex != -1) {
-//       // Update existing chat
-//       _chatContacts[existingIndex] = _chatContacts[existingIndex].copyWith(
-//         lastMessage: 'Started chatting',
-//         timestamp: 'Just now',
-//         isOnline: true,
-//       );
-//     } else {
-//       // Add new chat
-//       _chatContacts.insert(0, ChatContact(
-//         id: DateTime.now().millisecondsSinceEpoch.toString(),
-//         name: person.name,
-//         lastMessage: 'Started chatting',
-//         timestamp: 'Just now',
-//         unreadCount: 0,
-//         isOnline: true,
-//         avatar: person.imageUrl,
-//       ));
-//     }
-//   }
-//
-//   ChatContact? getChatContact(String personName) {
-//     try {
-//       return _chatContacts.firstWhere((contact) => contact.name == personName);
-//     } catch (e) {
-//       return null;
-//     }
-//   }
-// }
-//
 // // Main Networking Screen
 // class NetworkingScreen extends StatefulWidget {
 //   @override
@@ -810,6 +1054,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //   final connectedUsersViewModel = Get.put(ParticipantConnectedUsersViewModel());
 //   final pendingConnectionsViewModel = Get.put(ParticipantPendingConnectionShowViewModel());
 //   final connectionRequestViewModel = Get.put(ParticipantConnectionRequestHandleViewModel());
+//   final chatViewModel = Get.put(ParticipantChatViewModel());
 //
 //   @override
 //   void initState() {
@@ -825,6 +1070,8 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //   void _fetchData() {
 //     connectedUsersViewModel.fetchConnectedUsers(context);
 //     pendingConnectionsViewModel.fetchPendingConnections(context);
+//     // Also fetch connections for chat
+//     chatViewModel.fetchConnections();
 //   }
 //
 //   @override
@@ -845,7 +1092,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //         title: connection.sender.role,
 //         organization: 'Pending Connection',
 //         description: 'Connection request sent on ${_formatDate(connection.sentAt)}',
-//         imageUrl: connection.sender.displayImage,
+//         imageUrl: _getUserImageUrl(connection.sender.displayImage),
 //         status: 'pending',
 //         requestId: connection.requestId,
 //       );
@@ -862,11 +1109,19 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //         title: 'Connected User',
 //         organization: user.user.email,
 //         description: 'Connected since ${_formatDate(user.connectedAt)}',
-//         imageUrl: user.user.displayImage,
+//         imageUrl: _getUserImageUrl(user.user.displayImage),
 //         status: 'connected',
 //         connectionId: user.connectionId,
 //       );
 //     }).toList();
+//   }
+//
+//   String _getUserImageUrl(String? imageUrl) {
+//     if (imageUrl == null || imageUrl.isEmpty) {
+//       // Generate avatar with user initial
+//       return 'https://ui-avatars.com/api/?name=User&background=FFB3BA&color=fff&size=128';
+//     }
+//     return imageUrl;
 //   }
 //
 //   String _formatDate(String dateString) {
@@ -927,7 +1182,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //             ),
 //           ),
 //
-//           // Chat List Banner
+//           // Chat List Banner - Now navigates to REAL MessagesScreen
 //           GestureDetector(
 //             onTap: () {
 //               Navigator.push(
@@ -1004,7 +1259,7 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //                       ),
 //                       child: Center(
 //                         child: Obx(() => AppText(
-//                           text: 'Directory (${pendingConnectionsViewModel.pendingConnections.length})',
+//                           text: 'Requests (${pendingConnectionsViewModel.pendingConnections.length})',
 //                           fontSize: 14,
 //                           fontWeight: FontWeight.w600,
 //                           color: _tabController.index == 0
@@ -1158,30 +1413,23 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //   }
 //
 //   void _startChat(Person person) {
-//     // Add/Update chat in ChatManager
-//     ChatManager().addOrUpdateChat(person);
+//     // Convert Person to ChatUser for the chat system
+//     final chatUser = ChatUser(
+//       id: person.id,
+//       name: person.name,
+//       email: person.organization,
+//       role: person.title,
+//       displayImage: person.imageUrl,
+//     );
 //
-//     // Get or create chat contact
-//     ChatContact? contact = ChatManager().getChatContact(person.name);
+//     // Select the user in chat viewmodel
+//     chatViewModel.selectUser(chatUser);
 //
-//     if (contact == null) {
-//       // Create new contact if doesn't exist
-//       contact = ChatContact(
-//         id: person.id.toString(),
-//         name: person.name,
-//         lastMessage: 'Started chatting',
-//         timestamp: 'Just now',
-//         unreadCount: 0,
-//         isOnline: true,
-//         avatar: person.imageUrl,
-//       );
-//     }
-//
-//     // Navigate to individual chat
+//     // Navigate to REAL MessagesScreen (not the old IndividualChatScreen)
 //     Navigator.push(
 //       context,
 //       MaterialPageRoute(
-//         builder: (context) => IndividualChatScreen(contact: contact!),
+//         builder: (context) => MessagesScreen(),
 //       ),
 //     );
 //   }
@@ -1200,6 +1448,8 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //       // Refresh connected users if accepted
 //       if (status == 'ACCEPTED') {
 //         connectedUsersViewModel.fetchConnectedUsers(context);
+//         // Also refresh chat connections
+//         chatViewModel.fetchConnections();
 //       }
 //     }
 //   }
@@ -1230,9 +1480,9 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //                 radius: 25,
 //                 backgroundImage: NetworkImage(person.imageUrl),
 //                 onBackgroundImageError: (exception, stackTrace) {
-//                   // Handle image loading error
+//                   // Use default avatar if image fails to load
 //                 },
-//                 child: person.imageUrl.isEmpty
+//                 child: person.imageUrl.isEmpty || !person.imageUrl.startsWith('http')
 //                     ? Icon(Icons.person, color: Colors.white)
 //                     : null,
 //               ),
@@ -1455,26 +1705,4 @@ class _NetworkingScreenState extends State<NetworkingScreen>
 //     }
 //   }
 // }
-//
-// // Extension to add copyWith method to ChatContact
-// extension ChatContactExtension on ChatContact {
-//   ChatContact copyWith({
-//     String? id,
-//     String? name,
-//     String? lastMessage,
-//     String? timestamp,
-//     int? unreadCount,
-//     bool? isOnline,
-//     String? avatar,
-//   }) {
-//     return ChatContact(
-//       id: id ?? this.id,
-//       name: name ?? this.name,
-//       lastMessage: lastMessage ?? this.lastMessage,
-//       timestamp: timestamp ?? this.timestamp,
-//       unreadCount: unreadCount ?? this.unreadCount,
-//       isOnline: isOnline ?? this.isOnline,
-//       avatar: avatar ?? this.avatar,
-//     );
-//   }
-// }
+

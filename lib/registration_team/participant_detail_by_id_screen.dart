@@ -157,37 +157,37 @@ class _ParticipantDetailByIdScreenState extends State<ParticipantDetailByIdScree
           color: AppColors.darkgrey,
           fontWeight: FontWeight.w500,
         ),
-        const SizedBox(height: 8),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: isBlocked ? Colors.red.shade50 : Colors.green.shade50,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: isBlocked ? Colors.red.shade200 : Colors.green.shade200,
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: isBlocked ? Colors.red : Colors.green,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 8),
-              AppText(
-                text: isBlocked ? 'Blocked' : 'Active',
-                fontSize: 14,
-                color: isBlocked ? Colors.red : Colors.green,
-                fontWeight: FontWeight.w500,
-              ),
-            ],
-          ),
-        ),
+        // const SizedBox(height: 8),
+        // Container(
+        //   width: double.infinity,
+        //   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        //   decoration: BoxDecoration(
+        //     color: isBlocked ? Colors.red.shade50 : Colors.green.shade50,
+        //     borderRadius: BorderRadius.circular(8),
+        //     border: Border.all(
+        //       color: isBlocked ? Colors.red.shade200 : Colors.green.shade200,
+        //     ),
+        //   ),
+        //   child: Row(
+        //     children: [
+        //       Container(
+        //         width: 8,
+        //         height: 8,
+        //         decoration: BoxDecoration(
+        //           color: isBlocked ? Colors.red : Colors.green,
+        //           shape: BoxShape.circle,
+        //         ),
+        //       ),
+        //       const SizedBox(width: 8),
+        //       // AppText(
+        //       //   text: isBlocked ? 'Blocked' : 'Active',
+        //       //   fontSize: 14,
+        //       //   color: isBlocked ? Colors.red : Colors.green,
+        //       //   fontWeight: FontWeight.w500,
+        //       // ),
+        //     ],
+        //   ),
+        // ),
       ],
     );
   }
@@ -528,77 +528,77 @@ class _ParticipantDetailByIdScreenState extends State<ParticipantDetailByIdScree
                         ],
                       ),
                       const SizedBox(height: 20),
-
-                      // Account Status
-                      _buildStatusRow('Account Status', participant.isBlocked),
-                      const SizedBox(height: 16),
-
-                      // Registration Date
-                      _buildDateRow('Registration Date', participant.createdAt),
-                      const SizedBox(height: 16),
-
-                      // Last Updated
-                      _buildDateRow('Last Updated', participant.updatedAt),
+                      //
+                      // // Account Status
+                      // _buildStatusRow('Account Status', participant.isBlocked),
+                     // const SizedBox(height: 16),
+                     //
+                     //  // Registration Date
+                     //  _buildDateRow('Registration Date', participant.createdAt),
+                     //  const SizedBox(height: 16),
+                     //
+                     //  // Last Updated
+                     //  _buildDateRow('Last Updated', participant.updatedAt),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 32),
-
-                // Action Buttons
-                Row(
-                  children: [
-                    // Block/Unblock Button
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          _showBlockDialog(participant.isBlocked, participant.name);
-                        },
-                        icon: Icon(
-                          participant.isBlocked ? Icons.lock_open : Icons.block,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        label: AppText(
-                          text: participant.isBlocked ? 'Unblock User' : 'Block User',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: participant.isBlocked ? Colors.green : Colors.red,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-
-                    // QR Code Button
-                    SizedBox(
-                      width: 60,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _showQRCode(participant.name);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                        ),
-                        child: const Icon(Icons.qr_code, color: Colors.white, size: 24),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 40),
+                //
+                // // Action Buttons
+                // Row(
+                //   children: [
+                //     // Block/Unblock Button
+                //     Expanded(
+                //       child: ElevatedButton.icon(
+                //         onPressed: () {
+                //           _showBlockDialog(participant.isBlocked, participant.name);
+                //         },
+                //         icon: Icon(
+                //           participant.isBlocked ? Icons.lock_open : Icons.block,
+                //           color: Colors.white,
+                //           size: 20,
+                //         ),
+                //         label: AppText(
+                //           text: participant.isBlocked ? 'Unblock User' : 'Block User',
+                //           fontSize: 16,
+                //           fontWeight: FontWeight.w600,
+                //           color: Colors.white,
+                //         ),
+                //         style: ElevatedButton.styleFrom(
+                //           backgroundColor: participant.isBlocked ? Colors.green : Colors.red,
+                //           shape: RoundedRectangleBorder(
+                //             borderRadius: BorderRadius.circular(12),
+                //           ),
+                //           elevation: 0,
+                //           padding: const EdgeInsets.symmetric(vertical: 16),
+                //         ),
+                //       ),
+                //     ),
+                //     const SizedBox(width: 12),
+                //
+                //     // QR Code Button
+                //     SizedBox(
+                //       width: 60,
+                //       child: ElevatedButton(
+                //         onPressed: () {
+                //           _showQRCode(participant.name);
+                //         },
+                //         style: ElevatedButton.styleFrom(
+                //           backgroundColor: AppColors.primaryColor,
+                //           shape: RoundedRectangleBorder(
+                //             borderRadius: BorderRadius.circular(12),
+                //           ),
+                //           elevation: 0,
+                //           padding: const EdgeInsets.symmetric(vertical: 16),
+                //         ),
+                //         child: const Icon(Icons.qr_code, color: Colors.white, size: 24),
+                //       ),
+                //     ),
+                //   ],
+                // ),
+                //
+                // const SizedBox(height: 40),
               ],
             ),
           );

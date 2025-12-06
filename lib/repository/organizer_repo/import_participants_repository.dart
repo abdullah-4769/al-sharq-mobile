@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 import '../../data/request_models/organizer/csv_participant.dart';
 
 class ImportParticipantsRepository {
@@ -13,6 +12,8 @@ class ImportParticipantsRepository {
     try {
       final request = SendEmailRequest(email: email, name: name);
 
+      print('DEBUG: Sending invitation to $email');
+
       final response = await http.post(
         Uri.parse('$baseUrl/admin/users/send-email'),
         headers: {
@@ -20,6 +21,9 @@ class ImportParticipantsRepository {
         },
         body: jsonEncode(request.toJson()),
       );
+
+      print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response body: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
@@ -31,29 +35,11 @@ class ImportParticipantsRepository {
         );
       }
     } catch (e) {
+      print('DEBUG: Error in sendInvitation: $e');
       return SendEmailResponse(
         success: false,
-        error: 'Error sending invitation: $e',
+        error: 'Error: ${e.toString()}',
       );
     }
-  }
-
-  Future<List<SendEmailResponse>> sendBulkInvitations(
-      List<CsvParticipant> participants,
-      ) async {
-    List<SendEmailResponse> responses = [];
-
-    for (var participant in participants) {
-      final response = await sendInvitation(
-        email: participant.email,
-        name: participant.name,
-      );
-      responses.add(response);
-
-      // Small delay to avoid overwhelming the server
-      await Future.delayed(const Duration(milliseconds: 300));
-    }
-
-    return responses;
   }
 }
