@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "842443400568",
+    "project_id": "alsharq-76f89",
+    "storage_bucket": "alsharq-76f89.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:842443400568:android:cd08c2e009d3960346948d",
+        "android_client_info": {
+          "package_name": "com.eaglines.alshark"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpjb_AYrhzoZ5xdM9TCJZsWTYrwV1Lja0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:842443400568:android:ca518d53d5d29bc146948d",
+        "android_client_info": {
+          "package_name": "com.shark.alshark"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCpjb_AYrhzoZ5xdM9TCJZsWTYrwV1Lja0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,21 @@
+// lib/repository/participants_repository/participant_exhibitor_details_repo.dart
+
+import 'package:flutter/material.dart';
+import 'package:al_sharq_conference/data/network/base_api_service.dart';
+import 'package:al_sharq_conference/utils/api_constants.dart';
+import '../../../data/response_models/participant_response_model/sponsor_and_exibitors/participant_exibitor_detail_show_model.dart';
+
+class ParticipantExhibitorDetailsRepo {
+  final _apiService = NetworkApiServices();
+
+  Future<ParticipantExhibitorDetailsModel> getExhibitorDetails(
+      int exhibitorId,
+      BuildContext context
+      ) async {
+    final response = await _apiService.getGetApiServices(
+      context,
+      ApiConstants.getExhibitorDetails(exhibitorId),
+    );
+    return ParticipantExhibitorDetailsModel.fromJson(response);
+  }
+}
